@@ -5,7 +5,8 @@ step, and the hardware ceilings it is compared against:
 
 * device copy bandwidth (``torch`` ``copy_``; read + write counted),
 * the standalone cuFFT time for exactly the batched transforms one RK stage needs
-  (in-place CuPy plans and out-of-place ``torch.fft``; the faster one is the FFT ceiling),
+  (in-place CuPy plans called from Python and replayed from a CUDA graph, and out-of-place
+  ``torch.fft``; the fastest is the FFT ceiling),
 * the "FFT roofline" step time ``4 * t_fft_stage + pointwise_bytes / B_copy``.
 
 Traffic model (minimal, stated in the paper): every FFT reads its input and writes its output
@@ -170,6 +171,20 @@ def fft_ceiling(n: int, dim: int, form: str, dtype: str, min_time: float, repeat
         sync = cp.cuda.get_current_stream().synchronize
         ts, k = _time_fn(stage_cp, sync, min_time, repeats)
         out["cupy_inplace_stage_s"] = float(np.median(ts))
+        # same transforms replayed from a CUDA graph (10 stages per graph): removes Python and
+        # launch overhead, which otherwise dominates small grids
+        try:
+            stream = cp.cuda.Stream(non_blocking=True)
+            with stream:
+                stream.begin_capture()
+                for _ in range(10):
+                    stage_cp()
+                graph = stream.end_capture()
+            ts_g, _ = _time_fn(lambda: graph.launch(stream), stream.synchronize, min_time,
+                               repeats)
+            out["cupy_inplace_graph_stage_s"] = float(np.median(ts_g)) / 10
+        except Exception as e:  # noqa: BLE001
+            out["cupy_graph_error"] = f"{type(e).__name__}: {e}"
         ts_i, _ = _time_fn(lambda: inv.fft(W, W, cf.CUFFT_INVERSE), sync, min_time / 2, 3)
         ts_f, _ = _time_fn(lambda: fwd.fft(W, W, cf.CUFFT_FORWARD), sync, min_time / 2, 3)
         out["cupy_c2r_batch_s"] = float(np.median(ts_i))
@@ -193,7 +208,8 @@ def fft_ceiling(n: int, dim: int, form: str, dtype: str, min_time: float, repeat
         out["torch_stage_s"] = float(np.median(ts))
     except Exception as e:  # noqa: BLE001
         out["torch_error"] = f"{type(e).__name__}: {e}"
-    cands = [out[k] for k in ("cupy_inplace_stage_s", "torch_stage_s") if k in out]
+    keys = ("cupy_inplace_stage_s", "cupy_inplace_graph_stage_s", "torch_stage_s")
+    cands = [out[k] for k in keys if k in out]
     out["best_stage_s"] = min(cands) if cands else None
     return out
 
@@ -284,10 +300,9 @@ def plan(mode: str) -> dict[str, Any]:
                 "rot": ["cupy-cuda-c/fused-inplace", "triton/fused", "cupy/elementwise",
                         "torch-compile/inductor"],
                 "numpy2d": [256, 512, 1024], "numpy3d": [32, 64], "copy_bytes": 1 << 28,
-                # larger grids only for the memory-frugal fused variants (< ~1 GB)
+                # larger grids only for the leanest variant (keeps the shared GPU < ~1 GB)
                 "big2d": [4096], "big3d": [192],
-                "big_variants": ["cupy/elementwise", "warp/fused", "triton/fused",
-                                 "cupy-cuda-c/fused-inplace", "cupy-cuda-c/fused-inplace-graph"]}
+                "big_variants": ["cupy-cuda-c/fused-inplace-lean"]}
     return {"sizes2d": [256, 512, 1024, 2048, 4096, 8192],
             "sizes3d": [64, 96, 128, 192, 256, 320, 384],
             "min_time": 0.5, "repeats": 5, "budget_s": 840,

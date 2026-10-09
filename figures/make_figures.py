@@ -135,7 +135,9 @@ def fig_roofline(doc: dict) -> None:
         for yi, r in zip(y, rs, strict=True):
             ax.text(r["pct_fft_roofline"] + 1, yi, f"{r['pct_fft_roofline']:.0f}%",
                     va="center", fontsize=6)
-    axes[0].legend(fontsize=6, frameon=False, loc="lower right")
+    h, lab = axes[0].get_legend_handles_labels()
+    fig.legend(h, lab, fontsize=6.5, frameon=False, loc="lower center", ncol=2,
+               bbox_to_anchor=(0.5, -0.06))
     fig.tight_layout()
     save(fig, "fig_roofline")
 
@@ -159,9 +161,13 @@ def fig_ladder(doc: dict) -> None:
         ax.set_yticks(y, [f"{vname(r)} ({r['ffts_per_step']})" for r in rs], fontsize=6.5)
         ax.invert_yaxis()
         ax.set_xscale("log")
+        lo = min([r["step_ms"] for r in rs] + (fft or [math.inf]))
+        ax.set_xlim(left=0.6 * lo)
         ax.set_xlabel("ms per RK4 step (log)")
         ax.set_title(f"{dim}D, $N={n}$, fp32 (FFTs/step)")
-    axes[0].legend(fontsize=6.5, frameon=False, loc="lower right")
+    h, lab = axes[0].get_legend_handles_labels()
+    fig.legend(h, lab, fontsize=6.5, frameon=False, loc="lower center", ncol=2,
+               bbox_to_anchor=(0.5, -0.06))
     fig.tight_layout()
     save(fig, "fig_ladder")
 
@@ -204,7 +210,7 @@ def fig_tgv3d() -> list[dict]:
     ax.set_xlabel("$t$")
     ax.set_ylabel(r"$\varepsilon = -\mathrm{d}E/\mathrm{d}t$")
     ax.set_xlim(0, 20)
-    ax.legend(fontsize=7, frameon=False)
+    ax.legend(fontsize=6.5, frameon=False, loc="upper left")
     fig.tight_layout()
     save(fig, "fig_tgv3d")
     return docs
@@ -266,7 +272,6 @@ def fig_spectra(f2: dict | None, f3: dict | None) -> None:
         comp = E[m] * eps ** (-2 / 3) * k[m] ** (5 / 3)
         axes[1].semilogx(k[m] * eta, comp, color=COLORS["cupy-cuda-c"], lw=1.2,
                          label=rf"$N={f3['n']}$, $Re_\lambda={f3['re_lambda']:.0f}$")
-        axes[1].axhline(1.6, color="k", ls="--", lw=1, label=r"$C_K \approx 1.6$")
         axes[1].set_xlabel(r"$k\eta$")
         axes[1].set_ylabel(r"$\varepsilon^{-2/3}k^{5/3}E(k)$")
         axes[1].set_title("3D forced: compensated spectrum")

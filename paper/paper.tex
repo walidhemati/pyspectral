@@ -12,8 +12,57 @@
 \usepackage{cleveref}
 \hypersetup{colorlinks=true,linkcolor=blue!50!black,citecolor=blue!50!black,urlcolor=blue!50!black}
 \sisetup{group-minimum-digits=4}
+\emergencystretch=2em
 
 \input{results.tex}
+\providecommand{\aggErrSixtyFour}{n/a}
+\providecommand{\aggErrThirtyTwo}{n/a}
+\providecommand{\aggN}{n/a}
+\providecommand{\benchMode}{n/a}
+\providecommand{\bestThreeFFTshare}{n/a}
+\providecommand{\bestThreeMs}{n/a}
+\providecommand{\bestThreeN}{n/a}
+\providecommand{\bestThreeRoof}{n/a}
+\providecommand{\bestTwoMs}{n/a}
+\providecommand{\bestTwoN}{n/a}
+\providecommand{\bestTwoName}{n/a}
+\providecommand{\bestTwoRoof}{n/a}
+\providecommand{\copyBW}{n/a}
+\providecommand{\cpuTwoN}{n/a}
+\providecommand{\fpRatioTwo}{n/a}
+\providecommand{\fpRatioTwoN}{n/a}
+\providecommand{\gpuName}{n/a}
+\providecommand{\ifrkOrder}{n/a}
+\providecommand{\ladderTwoN}{n/a}
+\providecommand{\ladderTwoName}{n/a}
+\providecommand{\rkOrder}{n/a}
+\providecommand{\rotN}{n/a}
+\providecommand{\rotOverBasd}{n/a}
+\providecommand{\spatialErrMin}{n/a}
+\providecommand{\spatialNMax}{n/a}
+\providecommand{\spatialNRef}{n/a}
+\providecommand{\speedupTwoCPU}{n/a}
+\providecommand{\speedupTwoEager}{n/a}
+\providecommand{\speedupTwoTextbook}{n/a}
+\providecommand{\tgvMaxErr}{n/a}
+\providecommand{\tgvN}{n/a}
+\providecommand{\tgvPeak}{n/a}
+\providecommand{\tgvPeakErr}{n/a}
+\providecommand{\tgvPeakTime}{n/a}
+\providecommand{\tgvRefPeak}{n/a}
+\providecommand{\tgvRefPeakTime}{n/a}
+\providecommand{\tgvTableRows}{n/a}
+\providecommand{\tgvTwoErrSixtyFour}{n/a}
+\providecommand{\tgvTwoErrThirtyTwo}{n/a}
+\providecommand{\tgvTwoNVariants}{n/a}
+\providecommand{\threeFit}{n/a}
+\providecommand{\threeKeta}{n/a}
+\providecommand{\threeN}{n/a}
+\providecommand{\threeRe}{n/a}
+\providecommand{\threeSlope}{n/a}
+\providecommand{\twoFit}{n/a}
+\providecommand{\twoN}{n/a}
+\providecommand{\twoSlope}{n/a}
 \providecommand{\perfTableRows}{}
 \providecommand{\tgvTableRows}{}
 
@@ -40,7 +89,7 @@ hard lower bound: the number of transforms times the time of a standalone cuFFT 
 bytes the remaining pointwise work must move. We call this bound the \emph{FFT roofline}.
 \texttt{pyspectral} is a Python package that solves the 2D vorticity equation and the 3D
 Navier--Stokes equations in rotational form on a periodic box. It uses 2/3-rule dealiasing,
-integrating-factor RK4 and CFL-adaptive time steps. Eleven interchangeable backends span an
+integrating-factor RK4 and CFL-adaptive time steps. Eleven interchangeable backend variants span an
 optimisation ladder: NumPy/SciPy, eager PyTorch, \texttt{torch.compile}, CuPy elementwise
 kernels, NVIDIA Warp, Triton and hand-written CUDA C compiled at run time. Every backend is
 validated against a NumPy oracle. The 2D Taylor--Green vortex is reproduced to
@@ -78,7 +127,7 @@ calls the algorithm cannot avoid. Our contributions are:
 \item A pseudo-spectral Navier--Stokes solver, \texttt{pyspectral}: 2D vorticity form and 3D
   rotational form with Leray projection, 2/3-rule (or phase-shift) dealiasing, Lawson
   integrating-factor RK4~\cite{lawson1967generalized}, CFL-adaptive steps, and constant-power
-  forcing. Eleven backends share one interface and one test suite.
+  forcing. Eleven backend variants share one interface and one test suite.
 \item An FFT-count-minimal formulation following Basdevant~\cite{basdevant1983technical}: 4
   real-to-complex transforms per RK stage in 2D and 8 in 3D, with a fused schedule. Each stage
   runs exactly two pointwise kernels, the transforms are batched and in place, and the integrating
@@ -168,9 +217,9 @@ of Lundgren~\cite{lundgren2003linearly,rosales2005linear}. A constant-power cont
 $A=P/(2E_{\rm band})$ every few steps. With $E=e^{L\Delta t}$ and $E_{1/2}=e^{L\Delta t/2}$, the
 Lawson integrating-factor RK4~\cite{lawson1967generalized} reads
 \begin{align}
-k_1&=N(u_n), & k_2&=N\!\big(E_{1/2}(u_n+\tfrac{\Delta t}{2}k_1)\big), &
-k_3&=N\!\big(E_{1/2}u_n+\tfrac{\Delta t}{2}k_2\big), \nonumber\\
-k_4&=N\!\big(Eu_n+\Delta t\,E_{1/2}k_3\big), &
+k_1&=N(u_n), & k_2&=N\!\big(E_{1/2}(u_n+\tfrac{\Delta t}{2}k_1)\big), \nonumber\\
+k_3&=N\!\big(E_{1/2}u_n+\tfrac{\Delta t}{2}k_2\big), & k_4&=N\!\big(Eu_n+\Delta t\,E_{1/2}k_3\big),
+\nonumber\\
 u_{n+1}&=Eu_n+\tfrac{\Delta t}{6}\big(Ek_1+2E_{1/2}(k_2+k_3)+k_4\big). &&
 \end{align}
 It integrates the linear term exactly and needs one accumulator besides the state. The step
@@ -249,7 +298,7 @@ both 3D forms, with drag, forcing, a changed forcing amplitude and a changed $\D
 conservation, the 2D energy budget $\mathrm dE/\mathrm dt=-2\nu Z$, a divergence-free velocity,
 and agreement of phase-shift with 2/3-rule dealiasing.
 
-\begin{figure}[t]
+\begin{figure}[!htb]
 \centering
 \includegraphics[width=\linewidth]{../figures/fig_conv2d.pdf}
 \caption{Left: spectral convergence in $N$ for a smooth 2D flow (error against
@@ -259,7 +308,8 @@ self-convergence on a nonlinear flow, and IF-RK4 on the TGV, which is exact to r
 \end{figure}
 
 \paragraph{3D Taylor--Green vortex at $Re=1600$.} The initial condition is
-$\mathbf u=(\sin x\cos y\cos z,-\cos x\sin y\cos z,0)$ with $\nu=1/1600$, integrated to $t=20$.
+$u=\sin x\cos y\cos z$, $v=-\cos x\sin y\cos z$, $w=0$ with $\nu=1/1600$, integrated to
+$t=20$.
 This is the benchmark of the high-order CFD workshops~\cite{wang2013high,debonis2013solutions},
 originally studied by Brachet et al.~\cite{brachet1983small}. We compare the dissipation rate
 $\varepsilon=2\nu Z$ with the $512^3$ pseudo-spectral reference distributed for workshop case
@@ -277,7 +327,7 @@ gap to the $512^3$ reference, single precision (which can break the flow's discr
 earlier than a double-precision run), and the different time integrator of the reference
 (low-storage RK3). We have not separated these effects.
 
-\begin{table}[t]
+\begin{table}[!htb]
 \centering
 \caption{3D Taylor--Green vortex at $Re=1600$ (fp32, \texttt{cupy-cuda-c}, CFL 0.5) against
 the $512^3$ reference (peak \tgvRefPeak{} at $t=\tgvRefPeakTime$).}
@@ -291,7 +341,7 @@ grid & peak $\varepsilon$ & $t_{\rm peak}$ & peak error [\%] & max $|\Delta\vare
 \end{tabular}
 \end{table}
 
-\begin{figure}[t]
+\begin{figure}[!htb]
 \centering
 \includegraphics[width=0.6\linewidth]{../figures/fig_tgv3d.pdf}
 \caption{Kinetic-energy dissipation rate of the Taylor--Green vortex at $Re=1600$ against the
@@ -310,7 +360,7 @@ range, and no extended $k^{-5/3}$ range~\cite{kolmogorov1941local}. The local sl
 $\threeFit$ is $\threeSlope$. Both runs serve as end-to-end tests of the forcing,
 drag and diagnostics machinery. They are not converged turbulence statistics.
 
-\begin{figure}[t]
+\begin{figure}[!htb]
 \centering
 \includegraphics[width=\linewidth]{../figures/fig_spectra.pdf}
 \caption{Time-averaged energy spectra of forced turbulence. Left: 2D (grey band: forcing). Right:
@@ -321,11 +371,11 @@ drag and diagnostics machinery. They are not converged turbulence statistics.
 \section{Performance}
 
 All performance numbers come from \texttt{bench/run.py} on an \gpuName{} (GA104, 40 SMs,
-8\,GB GDDR6, datasheet bandwidth \SI{448}{GB/s}, measured copy bandwidth \SI{\copyBW}{GB/s}).
+8\,GB GDDR6, datasheet bandwidth \SI{448}{GB/s}, measured copy bandwidth \copyBW\,GB/s).
 We report the median of 5 repeats, each lasting at least \SI{0.5}{s} (fewer in the provisional
 dev run), after a warm-up that covers JIT compilation, plan creation and autotuning.
 
-\begin{figure}[t]
+\begin{figure}[!htb]
 \centering
 \includegraphics[width=\linewidth]{../figures/fig_scaling.pdf}
 \caption{Wall time per RK4 step against grid size (fp32), with the FFT roofline
@@ -333,7 +383,7 @@ dev run), after a warm-up that covers JIT compilation, plan creation and autotun
 \label{fig:scaling}
 \end{figure}
 
-\begin{figure}[t]
+\begin{figure}[!htb]
 \centering
 \includegraphics[width=\linewidth]{../figures/fig_roofline.pdf}
 \caption{Fraction of the FFT roofline reached by each variant at the largest grid (solid). The
@@ -342,9 +392,9 @@ single-pass FFT traffic model. Dashed line: the roofline.}
 \label{fig:roof}
 \end{figure}
 
-\begin{table}[t]
+\begin{table}[!htb]
 \centering
-\small
+\footnotesize
 \caption{Step times at the largest grids (fp32). ``FFT'' is the number of real FFTs per RK4 step;
 ``GB/s'' and ``\% copy'' use the ideal traffic model; ``\% roof'' is $T_{\rm roof}/T_{\rm step}$.}
 \label{tab:perf}
@@ -365,34 +415,21 @@ multithreaded NumPy/SciPy reference on 16 CPU threads at $N=\cpuTwoN$ (2D) the s
 \speedupTwoCPU$\times$. Fusing the pointwise phases into one kernel each (Inductor, CuPy, Warp,
 Triton) removes most of the gap. What remains is mostly the transforms. For identical shapes,
 the out-of-place \texttt{torch.fft} and \texttt{cupyx.scipy.fft} calls are measurably slower
-than in-place batched cuFFT plans; both timings are stored with the results. The CUDA C backend with
-in-place batched plans reaches \bestTwoRoof\,\% of the FFT roofline in 2D and \bestThreeRoof\,\%
-in 3D at $\bestThreeN^3$, where the FFTs alone take \bestThreeFFTshare\,\% of the step. At $\rotN^3$ the rotational form (9 FFTs) takes \rotOverBasd$\times$ the step time of the
+than in-place batched cuFFT plans; both timings are stored with the results. At the largest grids the
+fastest variants reach \bestTwoRoof\,\% of the FFT roofline in 2D (\texttt{\bestTwoName},
+$\bestTwoN^2$) and \bestThreeRoof\,\% in 3D (\texttt{\bestThreeName}, $\bestThreeN^3$), where
+the FFTs alone take \bestThreeFFTshare\,\% of the step. At $\rotN^3$ the rotational form (9 FFTs) takes \rotOverBasd$\times$ the step time of the
 Basdevant form (8 FFTs) in the CUDA C backend. CUDA graphs pay off only on small grids, where launch
 latency dominates.
 
 \paragraph{Precision.} On this consumer GPU, double-precision arithmetic runs at a small fraction
 of single-precision throughput. Double-precision FFTs therefore become compute-bound: at
 $\fpRatioTwoN^2$ an fp64 step of the CUDA C backend takes \fpRatioTwo$\times$ as long as an fp32
-step, much more than the $2\times$ that the doubled byte count alone would cause
-(\cref{fig:precision}). Production DNS on such hardware is therefore done in fp32. The
+step, much more than the $2\times$ that the doubled byte count alone would cause. Production DNS on such hardware is therefore done in fp32. The
 Taylor--Green results above use fp32 and agree with the fp64 reference to the plotting
 accuracy.
 
-\begin{figure}[t]
-\centering
-\includegraphics[width=\linewidth]{../figures/fig_precision.pdf}
-\caption{fp32 (solid) against fp64 (dashed) throughput.}
-\label{fig:precision}
-\end{figure}
 
-\begin{figure}[t]
-\centering
-\includegraphics[width=\linewidth]{../figures/fig_ladder.pdf}
-\caption{Step time of every rung at the largest grid. Dotted line: FFTs alone; dashed line: FFT
-roofline.}
-\label{fig:ladder}
-\end{figure}
 
 \section{Discussion}
 
@@ -427,7 +464,10 @@ part of this, and hand-written CUDA C adds the rest.
 Code, benchmark data and scripts to rebuild every figure and number in this paper:
 \url{https://github.com/walidhemati/pyspectral} (MIT licence).
 
+{\footnotesize
+\setlength{\bibsep}{2pt plus 1pt}
 \bibliographystyle{unsrtnat}
 \bibliography{references}
+}
 
 \end{document}
