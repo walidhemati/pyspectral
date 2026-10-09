@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import json
 import math
-import time
 from importlib import resources
 from pathlib import Path
 from typing import Any
@@ -159,19 +158,12 @@ def tgv3d(variant: str = "cupy-cuda-c/fused-inplace", n: int = 128, t_end: float
     With ``checkpoint`` and ``wall_limit`` the run stops after ``wall_limit`` seconds, saves
     its state and returns ``{"finished": False}``; calling again resumes it.
     """
-    from pyspectral.simulate import RunResult
-
     cfg = Config(n=n, dim=3, nu=TGV_NU, dtype=dtype, form=form)
     s = make_solver(variant, cfg)
     prev = None
     ck = Path(checkpoint) if checkpoint else None
     if ck is not None and ck.exists():
-        z = np.load(ck, allow_pickle=False)
-        s.set_state(z["state"])
-        s.t = float(z["t"])
-        h = json.loads(str(z["hist"]))
-        prev = RunResult(t=h["t"], energy=h["energy"], enstrophy=h["enstrophy"], dt=h["dt"],
-                         steps=h["steps"], wall=h["wall_s"])
+        prev, _ = _load_ck(ck, s)
     else:
         s.set_state(initial.to_spectral(initial.taylor_green_3d(n), 3))
     res = run(s, t_end, cfl=cfl, dt_max=0.05, diag_dt=diag_dt, wall_limit=wall_limit,
@@ -179,10 +171,7 @@ def tgv3d(variant: str = "cupy-cuda-c/fused-inplace", n: int = 128, t_end: float
     if not res.finished:
         if ck is None:
             raise RuntimeError("wall_limit reached without a checkpoint path")
-        ck.parent.mkdir(parents=True, exist_ok=True)
-        np.savez(ck, state=s.get_state().astype(np.complex64 if dtype == "float32" else complex),
-                 t=s.t,
-                 hist=json.dumps(res.as_dict()))
+        _save_ck(ck, s, res)
         return {"finished": False, "t": s.t, "steps": res.steps}
     if ck is not None and ck.exists():
         ck.unlink()
@@ -212,41 +201,78 @@ def tgv3d(variant: str = "cupy-cuda-c/fused-inplace", n: int = 128, t_end: float
 
 
 # ----------------------------------------------------------------------------- forced
+def _save_ck(ck: Path, s: Any, res: Any, **extra: Any) -> None:
+    ck.parent.mkdir(parents=True, exist_ok=True)
+    st = s.get_state()
+    st = st.astype(np.complex64) if s.cfg.dtype == "float32" else st
+    np.savez(ck, state=st, t=s.t, amp=s.force_amp, hist=json.dumps(res.as_dict()), **extra)
+
+
+def _load_ck(ck: Path, s: Any) -> tuple[Any, Any]:
+    from pyspectral.simulate import RunResult
+
+    z = np.load(ck, allow_pickle=False)
+    s.set_state(z["state"])
+    s.t = float(z["t"])
+    s.set_forcing_amplitude(float(z["amp"]))
+    h = json.loads(str(z["hist"]))
+    res = RunResult(t=h["t"], energy=h["energy"], enstrophy=h["enstrophy"], dt=h["dt"],
+                    steps=h["steps"], wall=h["wall_s"])
+    return res, z
+
+
 def forced(variant: str, dim: int, n: int, nu: float, alpha: float, klo: float, khi: float,
            power: float, t_end: float, t_avg: float, cfl: float = 0.5, seed: int = 0,
            dtype: str = "float32", fit_range: tuple[float, float] = (8.0, 30.0),
-           alpha_kmax: float = 0.0) -> dict[str, Any]:
-    """Constant-power band-forced turbulence; time-averaged spectrum over ``[t_avg, t_end]``."""
+           alpha_kmax: float = 0.0, checkpoint: str | Path | None = None,
+           wall_limit: float | None = None) -> dict[str, Any]:
+    """Constant-power band-forced turbulence; time-averaged spectrum over ``[t_avg, t_end]``.
+
+    Supports ``checkpoint``/``wall_limit`` chunking like :func:`tgv3d`.
+    """
     cfg = Config(n=n, dim=dim, nu=nu, alpha=alpha, alpha_kmax=alpha_kmax, force_amp=0.0,
-                 force_klo=klo,
-                 force_khi=khi, dtype=dtype)
+                 force_klo=klo, force_khi=khi, dtype=dtype)
     s = make_solver(variant, cfg)
     s.set_forcing_amplitude(1.0)  # non-zero so the band test is active
-    ic = (initial.random_2d(n, k0=(klo + khi) / 2, seed=seed, energy=0.05) if dim == 2
-          else initial.random_3d(n, k0=2.0, seed=seed, energy=0.5))
-    s.set_state(initial.to_spectral(ic, dim))
     spectra: list[np.ndarray] = []
+    ck = Path(checkpoint) if checkpoint else None
+    prev = None
+    if ck is not None and ck.exists():
+        prev, z = _load_ck(ck, s)
+        spectra = list(z["spectra"]) if z["spectra"].size else []
+    else:
+        ic = (initial.random_2d(n, k0=(klo + khi) / 2, seed=seed, energy=0.05) if dim == 2
+              else initial.random_3d(n, k0=2.0, seed=seed, energy=0.5))
+        s.set_state(initial.to_spectral(ic, dim))
 
     def cb(sol: Any) -> None:
-        if sol.t >= t_avg:
+        if sol.t >= t_avg - 1e-9:
             spectra.append(sol.diag.spectrum(sol.state_native())[1])
 
-    t0 = time.perf_counter()
     res = run(s, t_end, cfl=cfl, dt_max=0.05, diag_dt=t_end / 200, target_power=power,
-              callback=cb, callback_dt=(t_end - t_avg) / 50)
+              callback=cb, callback_dt=(t_end - t_avg) / 50, wall_limit=wall_limit, result=prev)
+    if not res.finished:
+        if ck is None:
+            raise RuntimeError("wall_limit reached without a checkpoint path")
+        _save_ck(ck, s, res, spectra=np.array(spectra) if spectra else np.zeros(0))
+        return {"finished": False, "t": s.t, "steps": res.steps}
+    if ck is not None and ck.exists():
+        ck.unlink()
     k = np.arange(len(spectra[0]))
     Ek = np.mean(spectra, axis=0)
     sel = (k >= fit_range[0]) & (k <= fit_range[1])
     slope = fit_slope(k[sel], Ek[sel])
-    E = res.energy[-1]
-    out = {"variant": variant, "dim": dim, "n": n, "nu": nu, "alpha": alpha,
-           "alpha_kmax": alpha_kmax, "band": [klo, khi],
+    tt = np.array(res.t)
+    win = tt >= t_avg
+    E = float(np.mean(np.array(res.energy)[win]))
+    out = {"finished": True, "variant": variant, "dim": dim, "n": n, "nu": nu, "alpha": alpha,
+           "alpha_kmax": alpha_kmax, "band": [klo, khi], "dtype": dtype,
            "power": power, "t_end": t_end, "t_avg": t_avg, "k": k.tolist(), "E_k": Ek.tolist(),
            "nspectra": len(spectra), "fit_range": list(fit_range), "slope": slope,
            "t": res.t, "energy": res.energy, "enstrophy": res.enstrophy,
-           "steps": res.steps, "wall_s": time.perf_counter() - t0}
+           "steps": res.steps, "wall_s": res.wall, "mean_energy": E}
     if dim == 3:
-        eps = 2 * nu * float(np.mean(res.enstrophy[len(res.enstrophy) // 2:]))
+        eps = 2 * nu * float(np.mean(np.array(res.enstrophy)[win]))
         urms = math.sqrt(2.0 / 3.0 * E)
         lam = math.sqrt(15.0 * nu * urms**2 / eps)
         eta = (nu**3 / eps) ** 0.25

@@ -92,12 +92,19 @@ def _cmd_validate(a: argparse.Namespace) -> int:
     if "forced2d" in what:
         r = V.forced(a.backend, 2, n=a.n, nu=a.nu, alpha=a.alpha, klo=a.klo, khi=a.khi,
                      power=a.power, t_end=a.t_end, t_avg=a.t_avg, fit_range=(a.kfit0, a.kfit1),
-                     alpha_kmax=a.alpha_kmax)
+                     alpha_kmax=a.alpha_kmax, checkpoint=a.checkpoint, wall_limit=a.wall_limit)
+        if not r["finished"]:
+            print(f"checkpointed at t={r['t']:.3f}; rerun the same command to resume")
+            return 3
         print({k: v for k, v in r.items() if not isinstance(v, list)})
         V.write_json(r, out / "validation_forced2d.json")
     if "forced3d" in what:
         r = V.forced(a.backend, 3, n=a.n, nu=a.nu, alpha=0.0, klo=a.klo, khi=a.khi,
-                     power=a.power, t_end=a.t_end, t_avg=a.t_avg, fit_range=(a.kfit0, a.kfit1))
+                     power=a.power, t_end=a.t_end, t_avg=a.t_avg, fit_range=(a.kfit0, a.kfit1),
+                     checkpoint=a.checkpoint, wall_limit=a.wall_limit)
+        if not r["finished"]:
+            print(f"checkpointed at t={r['t']:.3f}; rerun the same command to resume")
+            return 3
         print({k: v for k, v in r.items() if not isinstance(v, list)})
         V.write_json(r, out / "validation_forced3d.json")
     return 0
