@@ -1,0 +1,578 @@
+[
+ {
+  "variant": "torch-eager/c2c-textbook",
+  "dim": 2,
+  "n": 64,
+  "form": "basdevant",
+  "dtype": "float64",
+  "steps": 10,
+  "rel_err": 3.5336922114924767e-16
+ },
+ {
+  "variant": "torch-eager/c2c-textbook",
+  "dim": 2,
+  "n": 64,
+  "form": "basdevant",
+  "dtype": "float32",
+  "steps": 10,
+  "rel_err": 4.912831322414545e-07
+ },
+ {
+  "variant": "torch-eager/r2c-textbook",
+  "dim": 2,
+  "n": 64,
+  "form": "basdevant",
+  "dtype": "float64",
+  "steps": 10,
+  "rel_err": 2.2873003915411e-16
+ },
+ {
+  "variant": "torch-eager/r2c-textbook",
+  "dim": 2,
+  "n": 64,
+  "form": "basdevant",
+  "dtype": "float32",
+  "steps": 10,
+  "rel_err": 4.923596771108716e-07
+ },
+ {
+  "variant": "torch-eager/r2c-minfft",
+  "dim": 2,
+  "n": 64,
+  "form": "basdevant",
+  "dtype": "float64",
+  "steps": 10,
+  "rel_err": 2.2873003915411e-16
+ },
+ {
+  "variant": "torch-eager/r2c-minfft",
+  "dim": 2,
+  "n": 64,
+  "form": "basdevant",
+  "dtype": "float32",
+  "steps": 10,
+  "rel_err": 4.923596771108716e-07
+ },
+ {
+  "variant": "torch-compile/inductor",
+  "dim": 2,
+  "n": 64,
+  "form": "basdevant",
+  "dtype": "float64",
+  "steps": 10,
+  "rel_err": 2.8489537412207453e-16
+ },
+ {
+  "variant": "torch-compile/inductor",
+  "dim": 2,
+  "n": 64,
+  "form": "basdevant",
+  "dtype": "float32",
+  "steps": 10,
+  "rel_err": 5.145362526289151e-07
+ },
+ {
+  "variant": "cupy/elementwise",
+  "dim": 2,
+  "n": 64,
+  "form": "basdevant",
+  "dtype": "float64",
+  "steps": 10,
+  "rel_err": 1.150486831054417e-15
+ },
+ {
+  "variant": "cupy/elementwise",
+  "dim": 2,
+  "n": 64,
+  "form": "basdevant",
+  "dtype": "float32",
+  "steps": 10,
+  "rel_err": 4.3542768353693264e-07
+ },
+ {
+  "variant": "warp/fused",
+  "dim": 2,
+  "n": 64,
+  "form": "basdevant",
+  "dtype": "float64",
+  "steps": 10,
+  "rel_err": 1.150486831054417e-15
+ },
+ {
+  "variant": "warp/fused",
+  "dim": 2,
+  "n": 64,
+  "form": "basdevant",
+  "dtype": "float32",
+  "steps": 10,
+  "rel_err": 4.3542768353693264e-07
+ },
+ {
+  "variant": "triton/fused",
+  "dim": 2,
+  "n": 64,
+  "form": "basdevant",
+  "dtype": "float64",
+  "steps": 10,
+  "rel_err": 1.144501756101543e-15
+ },
+ {
+  "variant": "triton/fused",
+  "dim": 2,
+  "n": 64,
+  "form": "basdevant",
+  "dtype": "float32",
+  "steps": 10,
+  "rel_err": 3.963215393767674e-07
+ },
+ {
+  "variant": "cupy-cuda-c/fused-inplace",
+  "dim": 2,
+  "n": 64,
+  "form": "basdevant",
+  "dtype": "float64",
+  "steps": 10,
+  "rel_err": 1.144501756101543e-15
+ },
+ {
+  "variant": "cupy-cuda-c/fused-inplace",
+  "dim": 2,
+  "n": 64,
+  "form": "basdevant",
+  "dtype": "float32",
+  "steps": 10,
+  "rel_err": 4.376948795209202e-07
+ },
+ {
+  "variant": "cupy-cuda-c/fused-inplace-lean",
+  "dim": 2,
+  "n": 64,
+  "form": "basdevant",
+  "dtype": "float64",
+  "steps": 10,
+  "rel_err": 1.144501756101543e-15
+ },
+ {
+  "variant": "cupy-cuda-c/fused-inplace-lean",
+  "dim": 2,
+  "n": 64,
+  "form": "basdevant",
+  "dtype": "float32",
+  "steps": 10,
+  "rel_err": 4.376948795209202e-07
+ },
+ {
+  "variant": "cupy-cuda-c/fused-inplace-graph",
+  "dim": 2,
+  "n": 64,
+  "form": "basdevant",
+  "dtype": "float64",
+  "steps": 10,
+  "rel_err": 1.144501756101543e-15
+ },
+ {
+  "variant": "cupy-cuda-c/fused-inplace-graph",
+  "dim": 2,
+  "n": 64,
+  "form": "basdevant",
+  "dtype": "float32",
+  "steps": 10,
+  "rel_err": 4.376948795209202e-07
+ },
+ {
+  "variant": "torch-eager/c2c-textbook",
+  "dim": 3,
+  "n": 32,
+  "form": "basdevant",
+  "dtype": "float64",
+  "steps": 10,
+  "rel_err": 1.3931303101345662e-16
+ },
+ {
+  "variant": "torch-eager/c2c-textbook",
+  "dim": 3,
+  "n": 32,
+  "form": "basdevant",
+  "dtype": "float32",
+  "steps": 10,
+  "rel_err": 5.17079413494019e-07
+ },
+ {
+  "variant": "torch-eager/r2c-textbook",
+  "dim": 3,
+  "n": 32,
+  "form": "basdevant",
+  "dtype": "float64",
+  "steps": 10,
+  "rel_err": 7.16604673016685e-17
+ },
+ {
+  "variant": "torch-eager/r2c-textbook",
+  "dim": 3,
+  "n": 32,
+  "form": "basdevant",
+  "dtype": "float32",
+  "steps": 10,
+  "rel_err": 5.17079413494019e-07
+ },
+ {
+  "variant": "torch-eager/r2c-minfft",
+  "dim": 3,
+  "n": 32,
+  "form": "basdevant",
+  "dtype": "float64",
+  "steps": 10,
+  "rel_err": 7.16604673016685e-17
+ },
+ {
+  "variant": "torch-eager/r2c-minfft",
+  "dim": 3,
+  "n": 32,
+  "form": "basdevant",
+  "dtype": "float32",
+  "steps": 10,
+  "rel_err": 5.17079413494019e-07
+ },
+ {
+  "variant": "torch-compile/inductor",
+  "dim": 3,
+  "n": 32,
+  "form": "basdevant",
+  "dtype": "float64",
+  "steps": 10,
+  "rel_err": 4.866460543673645e-16
+ },
+ {
+  "variant": "torch-compile/inductor",
+  "dim": 3,
+  "n": 32,
+  "form": "basdevant",
+  "dtype": "float32",
+  "steps": 10,
+  "rel_err": 4.99446823772989e-07
+ },
+ {
+  "variant": "cupy/elementwise",
+  "dim": 3,
+  "n": 32,
+  "form": "basdevant",
+  "dtype": "float64",
+  "steps": 10,
+  "rel_err": 1.319065668115717e-15
+ },
+ {
+  "variant": "cupy/elementwise",
+  "dim": 3,
+  "n": 32,
+  "form": "basdevant",
+  "dtype": "float32",
+  "steps": 10,
+  "rel_err": 8.262505291469576e-07
+ },
+ {
+  "variant": "warp/fused",
+  "dim": 3,
+  "n": 32,
+  "form": "basdevant",
+  "dtype": "float64",
+  "steps": 10,
+  "rel_err": 1.1232784132160844e-15
+ },
+ {
+  "variant": "warp/fused",
+  "dim": 3,
+  "n": 32,
+  "form": "basdevant",
+  "dtype": "float32",
+  "steps": 10,
+  "rel_err": 4.748117311171972e-07
+ },
+ {
+  "variant": "triton/fused",
+  "dim": 3,
+  "n": 32,
+  "form": "basdevant",
+  "dtype": "float64",
+  "steps": 10,
+  "rel_err": 1.1232784132160844e-15
+ },
+ {
+  "variant": "triton/fused",
+  "dim": 3,
+  "n": 32,
+  "form": "basdevant",
+  "dtype": "float32",
+  "steps": 10,
+  "rel_err": 4.748117311171972e-07
+ },
+ {
+  "variant": "cupy-cuda-c/fused-inplace",
+  "dim": 3,
+  "n": 32,
+  "form": "basdevant",
+  "dtype": "float64",
+  "steps": 10,
+  "rel_err": 1.319065668115717e-15
+ },
+ {
+  "variant": "cupy-cuda-c/fused-inplace",
+  "dim": 3,
+  "n": 32,
+  "form": "basdevant",
+  "dtype": "float32",
+  "steps": 10,
+  "rel_err": 8.262505291469576e-07
+ },
+ {
+  "variant": "cupy-cuda-c/fused-inplace-lean",
+  "dim": 3,
+  "n": 32,
+  "form": "basdevant",
+  "dtype": "float64",
+  "steps": 10,
+  "rel_err": 1.319065668115717e-15
+ },
+ {
+  "variant": "cupy-cuda-c/fused-inplace-lean",
+  "dim": 3,
+  "n": 32,
+  "form": "basdevant",
+  "dtype": "float32",
+  "steps": 10,
+  "rel_err": 8.262505291469576e-07
+ },
+ {
+  "variant": "cupy-cuda-c/fused-inplace-graph",
+  "dim": 3,
+  "n": 32,
+  "form": "basdevant",
+  "dtype": "float64",
+  "steps": 10,
+  "rel_err": 1.319065668115717e-15
+ },
+ {
+  "variant": "cupy-cuda-c/fused-inplace-graph",
+  "dim": 3,
+  "n": 32,
+  "form": "basdevant",
+  "dtype": "float32",
+  "steps": 10,
+  "rel_err": 8.262505291469576e-07
+ },
+ {
+  "variant": "torch-eager/c2c-textbook",
+  "dim": 3,
+  "n": 32,
+  "form": "rotational",
+  "dtype": "float64",
+  "steps": 10,
+  "rel_err": 1.3931303101345662e-16
+ },
+ {
+  "variant": "torch-eager/c2c-textbook",
+  "dim": 3,
+  "n": 32,
+  "form": "rotational",
+  "dtype": "float32",
+  "steps": 10,
+  "rel_err": 5.17079413494019e-07
+ },
+ {
+  "variant": "torch-eager/r2c-textbook",
+  "dim": 3,
+  "n": 32,
+  "form": "rotational",
+  "dtype": "float64",
+  "steps": 10,
+  "rel_err": 7.772668989624895e-17
+ },
+ {
+  "variant": "torch-eager/r2c-textbook",
+  "dim": 3,
+  "n": 32,
+  "form": "rotational",
+  "dtype": "float32",
+  "steps": 10,
+  "rel_err": 5.17079413494019e-07
+ },
+ {
+  "variant": "torch-eager/r2c-minfft",
+  "dim": 3,
+  "n": 32,
+  "form": "rotational",
+  "dtype": "float64",
+  "steps": 10,
+  "rel_err": 7.772668989624895e-17
+ },
+ {
+  "variant": "torch-eager/r2c-minfft",
+  "dim": 3,
+  "n": 32,
+  "form": "rotational",
+  "dtype": "float32",
+  "steps": 10,
+  "rel_err": 5.17079413494019e-07
+ },
+ {
+  "variant": "torch-compile/inductor",
+  "dim": 3,
+  "n": 32,
+  "form": "rotational",
+  "dtype": "float64",
+  "steps": 10,
+  "rel_err": 4.915867501154867e-16
+ },
+ {
+  "variant": "torch-compile/inductor",
+  "dim": 3,
+  "n": 32,
+  "form": "rotational",
+  "dtype": "float32",
+  "steps": 10,
+  "rel_err": 4.99446823772989e-07
+ },
+ {
+  "variant": "cupy/elementwise",
+  "dim": 3,
+  "n": 32,
+  "form": "rotational",
+  "dtype": "float64",
+  "steps": 10,
+  "rel_err": 1.3304666205556234e-15
+ },
+ {
+  "variant": "cupy/elementwise",
+  "dim": 3,
+  "n": 32,
+  "form": "rotational",
+  "dtype": "float32",
+  "steps": 10,
+  "rel_err": 8.262505291469576e-07
+ },
+ {
+  "variant": "triton/fused",
+  "dim": 3,
+  "n": 32,
+  "form": "rotational",
+  "dtype": "float64",
+  "steps": 10,
+  "rel_err": 1.1258302536365598e-15
+ },
+ {
+  "variant": "triton/fused",
+  "dim": 3,
+  "n": 32,
+  "form": "rotational",
+  "dtype": "float32",
+  "steps": 10,
+  "rel_err": 4.748117311171972e-07
+ },
+ {
+  "variant": "cupy-cuda-c/fused-inplace",
+  "dim": 3,
+  "n": 32,
+  "form": "rotational",
+  "dtype": "float64",
+  "steps": 10,
+  "rel_err": 1.3304666205556234e-15
+ },
+ {
+  "variant": "cupy-cuda-c/fused-inplace",
+  "dim": 3,
+  "n": 32,
+  "form": "rotational",
+  "dtype": "float32",
+  "steps": 10,
+  "rel_err": 8.262505291469576e-07
+ },
+ {
+  "variant": "cupy-cuda-c/fused-inplace-lean",
+  "dim": 3,
+  "n": 32,
+  "form": "rotational",
+  "dtype": "float64",
+  "steps": 10,
+  "rel_err": 1.3304666205556234e-15
+ },
+ {
+  "variant": "cupy-cuda-c/fused-inplace-lean",
+  "dim": 3,
+  "n": 32,
+  "form": "rotational",
+  "dtype": "float32",
+  "steps": 10,
+  "rel_err": 8.262505291469576e-07
+ },
+ {
+  "variant": "cupy-cuda-c/fused-inplace-graph",
+  "dim": 3,
+  "n": 32,
+  "form": "rotational",
+  "dtype": "float64",
+  "steps": 10,
+  "rel_err": 1.3304666205556234e-15
+ },
+ {
+  "variant": "cupy-cuda-c/fused-inplace-graph",
+  "dim": 3,
+  "n": 32,
+  "form": "rotational",
+  "dtype": "float32",
+  "steps": 10,
+  "rel_err": 8.262505291469576e-07
+ },
+ {
+  "variant": "torch-eager/c2c-textbook",
+  "dim": 2,
+  "n": 64,
+  "form": "advective",
+  "dtype": "float64",
+  "steps": 10,
+  "rel_err": 2.826953769193981e-16
+ },
+ {
+  "variant": "torch-eager/c2c-textbook",
+  "dim": 2,
+  "n": 64,
+  "form": "advective",
+  "dtype": "float32",
+  "steps": 10,
+  "rel_err": 4.926541414121325e-07
+ },
+ {
+  "variant": "torch-eager/r2c-textbook",
+  "dim": 2,
+  "n": 64,
+  "form": "advective",
+  "dtype": "float64",
+  "steps": 10,
+  "rel_err": 1.4569786236405942e-16
+ },
+ {
+  "variant": "torch-eager/r2c-textbook",
+  "dim": 2,
+  "n": 64,
+  "form": "advective",
+  "dtype": "float32",
+  "steps": 10,
+  "rel_err": 4.926541414121325e-07
+ },
+ {
+  "variant": "torch-eager/r2c-minfft",
+  "dim": 2,
+  "n": 64,
+  "form": "advective",
+  "dtype": "float64",
+  "steps": 10,
+  "rel_err": 1.4569786236405942e-16
+ },
+ {
+  "variant": "torch-eager/r2c-minfft",
+  "dim": 2,
+  "n": 64,
+  "form": "advective",
+  "dtype": "float32",
+  "steps": 10,
+  "rel_err": 4.926541414121325e-07
+ }
+]

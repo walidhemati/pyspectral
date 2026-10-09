@@ -10,8 +10,9 @@
 // RK4 stage update and directly writes the next stage's FFT inputs, so no field is ever
 // re-read by a separate "pre" kernel.
 //
-// Integrating factor: L(k) = -(nu k^2 + alpha) + A [klo^2 <= k^2 <= khi^2] is separable
-// apart from the band term, so exp(L theta dt) = t[|kx|] t[|ky|] (t[kz]) * ea * (band? eb : 1)
+// Integrating factor: L(k) = -(nu k^2 + alpha [k^2 <= ka2]) + A [klo^2 <= k^2 <= khi^2] is
+// separable apart from the band terms, so
+// exp(L theta dt) = t[|kx|] t[|ky|] (t[kz]) * (drag? ea : 1) * (band? eb : 1)
 // with a 1D table t[m] = exp(-nu m^2 theta dt) (theta = 1 and 1/2): no transcendental math
 // per mode, which matters for fp64 on consumer GPUs.
 
@@ -41,10 +42,11 @@ struct IF {
 // Integrating-factor values for one mode.
 __device__ __forceinline__ IF if_factors(const real* __restrict__ tab, int nh1, int ax, int ay,
                                          int az, real k2, real ea1, real eah, real eb1, real ebh,
-                                         real klo2, real khi2) {
+                                         real klo2, real khi2, real ka2) {
     IF f;
-    f.E = tab[ax] * tab[ay] * ea1;
-    f.Eh = tab[nh1 + ax] * tab[nh1 + ay] * eah;
+    bool drag = k2 <= ka2;
+    f.E = tab[ax] * tab[ay] * (drag ? ea1 : (real)1);
+    f.Eh = tab[nh1 + ax] * tab[nh1 + ay] * (drag ? eah : (real)1);
     if (az >= 0) {
         f.E *= tab[az];
         f.Eh *= tab[nh1 + az];
@@ -111,7 +113,8 @@ extern "C" __global__ void phys2d(real* W, i64 fsr) {
 
 extern "C" __global__ void post2d(cplx* W, cplx* u0, cplx* acc, const real* __restrict__ tab,
                                   int n, int nh, i64 fsc, int stage, real dt, real ea1, real eah,
-                                  real eb1, real ebh, real klo2, real khi2, real scale) {
+                                  real eb1, real ebh, real klo2, real khi2, real ka2,
+                                  real scale) {
     i64 idx = (i64)blockIdx.x * blockDim.x + threadIdx.x;
     if (idx >= fsc) return;
     int j = (int)(idx % nh);
@@ -125,7 +128,7 @@ extern "C" __global__ void post2d(cplx* W, cplx* u0, cplx* acc, const real* __re
         cplx A = W[idx], B = W[fsc + idx];
         N = cfma(kx * ky, A, csc(kx * kx - ky * ky, B));
     }
-    IF f = if_factors(tab, nh, abs(kxi), j, -1, k2, ea1, eah, eb1, ebh, klo2, khi2);
+    IF f = if_factors(tab, nh, abs(kxi), j, -1, k2, ea1, eah, eb1, ebh, klo2, khi2, ka2);
     cplx nxt = rk_stage(stage, dt, f, N, u0 + idx, acc + idx);
     write_uv2d(nxt, kx, ky, k2, keep, scale, W, idx, fsc);
 }
@@ -195,7 +198,8 @@ extern "C" __global__ void phys3d_rot(real* W, i64 fsr) {
 
 extern "C" __global__ void post3d(cplx* W, cplx* u0, cplx* acc, const real* __restrict__ tab,
                                   int n, int nh, i64 fsc, int rot, int stage, real dt, real ea1,
-                                  real eah, real eb1, real ebh, real klo2, real khi2, real scale) {
+                                  real eah, real eb1, real ebh, real klo2, real khi2, real ka2,
+                                  real scale) {
     i64 idx = (i64)blockIdx.x * blockDim.x + threadIdx.x;
     if (idx >= fsc) return;
     int kxi, kyi, kz;
@@ -225,7 +229,8 @@ extern "C" __global__ void post3d(cplx* W, cplx* u0, cplx* acc, const real* __re
         N1 = cfma(-ky, d, N1);
         N2 = cfma(-kzr, d, N2);
     }
-    IF f = if_factors(tab, nh, abs(kxi), abs(kyi), kz, k2, ea1, eah, eb1, ebh, klo2, khi2);
+    IF f = if_factors(tab, nh, abs(kxi), abs(kyi), kz, k2, ea1, eah, eb1, ebh, klo2, khi2,
+                      ka2);
     cplx a = rk_stage(stage, dt, f, N0, u0 + idx, acc + idx);
     cplx b = rk_stage(stage, dt, f, N1, u0 + fsc + idx, acc + fsc + idx);
     cplx c = rk_stage(stage, dt, f, N2, u0 + 2 * fsc + idx, acc + 2 * fsc + idx);

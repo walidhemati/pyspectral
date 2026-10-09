@@ -91,7 +91,8 @@ def _cmd_validate(a: argparse.Namespace) -> int:
         V.write_json(r, out / f"validation_tgv3d_n{a.n}.json")
     if "forced2d" in what:
         r = V.forced(a.backend, 2, n=a.n, nu=a.nu, alpha=a.alpha, klo=a.klo, khi=a.khi,
-                     power=a.power, t_end=a.t_end, t_avg=a.t_avg, fit_range=(a.kfit0, a.kfit1))
+                     power=a.power, t_end=a.t_end, t_avg=a.t_avg, fit_range=(a.kfit0, a.kfit1),
+                     alpha_kmax=a.alpha_kmax)
         print({k: v for k, v in r.items() if not isinstance(v, list)})
         V.write_json(r, out / "validation_forced2d.json")
     if "forced3d" in what:
@@ -141,6 +142,7 @@ def main(argv: list[str] | None = None) -> int:
     v.add_argument("--dtype", default="float32")
     v.add_argument("--nu", type=float, default=1e-3)
     v.add_argument("--alpha", type=float, default=0.0)
+    v.add_argument("--alpha-kmax", type=float, default=0.0)
     v.add_argument("--klo", type=float, default=1.0)
     v.add_argument("--khi", type=float, default=2.5)
     v.add_argument("--power", type=float, default=0.1)

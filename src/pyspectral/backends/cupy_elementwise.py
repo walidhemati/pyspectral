@@ -32,7 +32,8 @@ __device__ C rk_stage(int stage, R dt, R E, R Eh, C N, C& u0, C& acc) {
 """
 
 _IF = r"""
-    R E = tab[ax] * tab[ay] * ea1, Eh = tab[nh + ax] * tab[nh + ay] * eah;
+    R E = tab[ax] * tab[ay] * (k2 <= ka2 ? ea1 : (R)1);
+    R Eh = tab[nh + ax] * tab[nh + ay] * (k2 <= ka2 ? eah : (R)1);
 """
 
 
@@ -44,7 +45,7 @@ def _kernels(cp: Any) -> dict[str, Any]:
                      "pyspectral_phys2d")
     k["post2d"] = ek(
         "C A, C B, raw R tab, int32 n, int32 nh, int32 stage, R dt, R ea1, R eah, R eb1, R ebh, "
-        "R klo2, R khi2",
+        "R klo2, R khi2, R ka2",
         "C u0, C acc, C wu, C wv",
         r"""
         int j = i % nh, ii = i / nh;
@@ -94,7 +95,7 @@ def _kernels(cp: Any) -> dict[str, Any]:
         w2 = s * rk_stage<C, R>(stage, dt, E, Eh, N2, u2, a2);
     """
     common_in = ("raw R tab, int32 n, int32 nh, int32 stage, R dt, R ea1, R eah, R eb1, R ebh, "
-                 "R klo2, R khi2")
+                 "R klo2, R khi2, R ka2")
     k["post3d_basd"] = ek(
         "C t11, C t22, C t12, C t13, C t23, " + common_in,
         "C u0, C u1, C u2, C a0, C a1, C a2, C w0, C w1, C w2",
@@ -208,7 +209,7 @@ class CupyElementwiseSolver(SpectralSolver):
         r = self.rdt
         klo2 = r(self.cfg.force_klo**2 if on else 1.0)
         khi2 = r(self.cfg.force_khi**2 if on else 0.0)
-        return (r(dt), r(ea1), r(eah), r(eb1), r(ebh), klo2, khi2)
+        return (r(dt), r(ea1), r(eah), r(eb1), r(ebh), klo2, khi2, r(self.cfg.drag_k2))
 
     def _step(self, dt: float) -> None:
         sc = self._scalars(dt)

@@ -25,10 +25,11 @@ def _make(v, cfg):
 @pytest.mark.parametrize("v", GPU, ids=lambda v: v.name)
 @pytest.mark.parametrize("dtype", ["float64", "float32"])
 @pytest.mark.parametrize("dim,form", [(2, "basdevant"), (3, "basdevant"), (3, "rotational")])
-def test_matches_reference(v, dtype, dim, form):
+@pytest.mark.parametrize("alpha_kmax", [0.0, 2.0])
+def test_matches_reference(v, dtype, dim, form, alpha_kmax):
     n = 32 if dim == 2 else 16
-    cfg = Config(n=n, dim=dim, nu=0.01, alpha=0.02, force_amp=0.3, force_klo=1, force_khi=2.5,
-                 dtype=dtype, form=form)
+    cfg = Config(n=n, dim=dim, nu=0.01, alpha=0.5, alpha_kmax=alpha_kmax, force_amp=0.3,
+                 force_klo=1, force_khi=2.5, dtype=dtype, form=form)
     s = _make(v, cfg)
     ref = NumpySolver(cfg.with_(dtype="float64"))
     ic = (initial.to_spectral(initial.random_2d(n, k0=4), 2) if dim == 2

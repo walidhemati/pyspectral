@@ -157,7 +157,8 @@ class CupyCudaSolver(SpectralSolver):
         r = self.rdt
         klo2 = r(self.cfg.force_klo**2) if self.force_amp != 0.0 else r(1.0)
         khi2 = r(self.cfg.force_khi**2) if self.force_amp != 0.0 else r(0.0)
-        return (r(dt), r(ea1), r(eah), r(eb1), r(ebh), klo2, khi2, self.scale)
+        return (r(dt), r(ea1), r(eah), r(eb1), r(ebh), klo2, khi2, r(self.cfg.drag_k2),
+                self.scale)
 
     def _stage(self, stage: int, sc: tuple[Any, ...]) -> None:
         self.fft_inverse()

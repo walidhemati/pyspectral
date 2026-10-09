@@ -214,10 +214,11 @@ def tgv3d(variant: str = "cupy-cuda-c/fused-inplace", n: int = 128, t_end: float
 # ----------------------------------------------------------------------------- forced
 def forced(variant: str, dim: int, n: int, nu: float, alpha: float, klo: float, khi: float,
            power: float, t_end: float, t_avg: float, cfl: float = 0.5, seed: int = 0,
-           dtype: str = "float32", fit_range: tuple[float, float] = (8.0, 30.0)
-           ) -> dict[str, Any]:
+           dtype: str = "float32", fit_range: tuple[float, float] = (8.0, 30.0),
+           alpha_kmax: float = 0.0) -> dict[str, Any]:
     """Constant-power band-forced turbulence; time-averaged spectrum over ``[t_avg, t_end]``."""
-    cfg = Config(n=n, dim=dim, nu=nu, alpha=alpha, force_amp=0.0, force_klo=klo,
+    cfg = Config(n=n, dim=dim, nu=nu, alpha=alpha, alpha_kmax=alpha_kmax, force_amp=0.0,
+                 force_klo=klo,
                  force_khi=khi, dtype=dtype)
     s = make_solver(variant, cfg)
     s.set_forcing_amplitude(1.0)  # non-zero so the band test is active
@@ -238,7 +239,8 @@ def forced(variant: str, dim: int, n: int, nu: float, alpha: float, klo: float, 
     sel = (k >= fit_range[0]) & (k <= fit_range[1])
     slope = fit_slope(k[sel], Ek[sel])
     E = res.energy[-1]
-    out = {"variant": variant, "dim": dim, "n": n, "nu": nu, "alpha": alpha, "band": [klo, khi],
+    out = {"variant": variant, "dim": dim, "n": n, "nu": nu, "alpha": alpha,
+           "alpha_kmax": alpha_kmax, "band": [klo, khi],
            "power": power, "t_end": t_end, "t_avg": t_avg, "k": k.tolist(), "E_k": Ek.tolist(),
            "nspectra": len(spectra), "fit_range": list(fit_range), "slope": slope,
            "t": res.t, "energy": res.energy, "enstrophy": res.enstrophy,

@@ -114,7 +114,9 @@ class SpectralSolver(ABC):
     def linear_operator(self, k2: Any) -> Any:
         """``L(k)`` for the integrating factor, evaluated on a k^2 array (NumPy/CuPy/torch)."""
         c = self.cfg
-        L = -(c.nu * k2 + c.alpha)
+        L = -(c.nu * k2)
+        if c.alpha != 0.0:
+            L = L - (k2 * 0.0 + c.alpha) * (k2 <= c.drag_k2)
         if self.force_amp != 0.0:
             band = (k2 >= c.force_klo**2) * (k2 <= c.force_khi**2)
             L = L + (k2 * 0.0 + self.force_amp) * band  # keeps k2's dtype in torch

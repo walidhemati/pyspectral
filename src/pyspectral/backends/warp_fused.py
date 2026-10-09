@@ -102,8 +102,11 @@ def _build() -> dict[str, Any]:
             c2 = kx * kx - ky * ky
             nr = c1 * Q[2 * idx] + c2 * Q[2 * (fsc + idx)]
             ni = c1 * Q[2 * idx + 1] + c2 * Q[2 * (fsc + idx) + 1]
-        E = tab[ax] * tab[j] * P[1]
-        Eh = tab[nh + ax] * tab[nh + j] * P[2]
+        E = tab[ax] * tab[j]
+        Eh = tab[nh + ax] * tab[nh + j]
+        if k2 <= P[7]:
+            E = E * P[1]
+            Eh = Eh * P[2]
         if k2 >= P[5] and k2 <= P[6]:
             E = E * P[3]
             Eh = Eh * P[4]
@@ -197,8 +200,11 @@ def _build() -> dict[str, Any]:
             n1i = n1i - ky * di
             n2r = n2r - kzr * dr
             n2i = n2i - kzr * di
-        E = tab[ax] * tab[ay] * tab[kz] * P[1]
-        Eh = tab[nh + ax] * tab[nh + ay] * tab[nh + kz] * P[2]
+        E = tab[ax] * tab[ay] * tab[kz]
+        Eh = tab[nh + ax] * tab[nh + ay] * tab[nh + kz]
+        if k2 <= P[7]:
+            E = E * P[1]
+            Eh = Eh * P[2]
         if k2 >= P[5] and k2 <= P[6]:
             E = E * P[3]
             Eh = Eh * P[4]
@@ -251,7 +257,7 @@ class WarpSolver(SpectralSolver):
         self.Q = torch.zeros((nw,) + spec, dtype=self.cdt, device=dev)
         self.R = torch.zeros((nw,) + (n,) * d, dtype=self.rdt, device=dev)
         self.tab = torch.zeros(2 * self.nh, dtype=self.rdt, device=dev)
-        self.P = torch.zeros(7, dtype=self.rdt, device=dev)
+        self.P = torch.zeros(8, dtype=self.rdt, device=dev)
         self._key: Any = None
         self.dims = tuple(range(-d, 0))
         self.s = (n,) * d
@@ -303,7 +309,8 @@ class WarpSolver(SpectralSolver):
         ea1, eah, eb1, ebh = if_scalars(self.cfg.alpha, self.force_amp, dt)
         klo2 = self.cfg.force_klo**2 if on else 1.0
         khi2 = self.cfg.force_khi**2 if on else 0.0
-        self.P.copy_(self.torch.tensor([dt, ea1, eah, eb1, ebh, klo2, khi2], dtype=self.rdt))
+        self.P.copy_(self.torch.tensor([dt, ea1, eah, eb1, ebh, klo2, khi2,
+                                                 self.cfg.drag_k2], dtype=self.rdt))
         self._key = key
 
     def _step(self, dt: float) -> None:

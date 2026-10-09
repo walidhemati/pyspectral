@@ -88,6 +88,7 @@ if _HAVE_TRITON:
         ebh = tl.load(P + 4)
         klo2 = tl.load(P + 5)
         khi2 = tl.load(P + 6)
+        ka2 = tl.load(P + 7)
         j = idx % nh
         i = idx // nh
         kxi = tl.where(i < n // 2, i, i - n)
@@ -102,9 +103,11 @@ if _HAVE_TRITON:
         c2 = kx * kx - ky * ky
         nr = c1 * ar + c2 * br
         ni = c1 * ai + c2 * bi
-        E = tl.load(tab + akx, mask=m, other=0.0) * tl.load(tab + j, mask=m, other=0.0) * ea1
+        drag = k2 <= ka2
+        E = (tl.load(tab + akx, mask=m, other=0.0) * tl.load(tab + j, mask=m, other=0.0)
+             * tl.where(drag, ea1, 1.0))
         Eh = (tl.load(tab + nh + akx, mask=m, other=0.0) * tl.load(tab + nh + j, mask=m, other=0.0)
-              * eah)
+              * tl.where(drag, eah, 1.0))
         band = (k2 >= klo2) & (k2 <= khi2)
         E = tl.where(band, E * eb1, E)
         Eh = tl.where(band, Eh * ebh, Eh)
@@ -158,6 +161,7 @@ if _HAVE_TRITON:
         ebh = tl.load(P + 4)
         klo2 = tl.load(P + 5)
         khi2 = tl.load(P + 6)
+        ka2 = tl.load(P + 7)
         kz = idx % nh
         t = idx // nh
         jj = t % n
@@ -202,11 +206,12 @@ if _HAVE_TRITON:
         n1i = n1i - ky * di
         n2r = n2r - kzr * dr
         n2i = n2i - kzr * di
+        drag = k2 <= ka2
         E = (tl.load(tab + akx, mask=m, other=0.0) * tl.load(tab + aky, mask=m, other=0.0)
-             * tl.load(tab + kz, mask=m, other=0.0) * ea1)
+             * tl.load(tab + kz, mask=m, other=0.0) * tl.where(drag, ea1, 1.0))
         Eh = (tl.load(tab + nh + akx, mask=m, other=0.0)
               * tl.load(tab + nh + aky, mask=m, other=0.0)
-              * tl.load(tab + nh + kz, mask=m, other=0.0) * eah)
+              * tl.load(tab + nh + kz, mask=m, other=0.0) * tl.where(drag, eah, 1.0))
         band = (k2 >= klo2) & (k2 <= khi2)
         E = tl.where(band, E * eb1, E)
         Eh = tl.where(band, Eh * ebh, Eh)
@@ -274,7 +279,7 @@ class TritonSolver(SpectralSolver):
         self.R = torch.zeros((nw,) + (n,) * d, dtype=self.rdt, device=dev)
         self.tab = torch.zeros(2 * self.nh, dtype=self.rdt, device=dev)
         self._tab_key: tuple[float, float] | None = None
-        self.P = torch.zeros(7, dtype=self.rdt, device=dev)
+        self.P = torch.zeros(8, dtype=self.rdt, device=dev)
         self._pkey: tuple[float, ...] | None = None
         self.dims = tuple(range(-d, 0))
         self.s = (n,) * d
@@ -334,7 +339,7 @@ class TritonSolver(SpectralSolver):
         on = self.force_amp != 0.0
         klo2 = float(self.cfg.force_klo**2) if on else 1.0
         khi2 = float(self.cfg.force_khi**2) if on else 0.0
-        vals = (dt, ea1, eah, eb1, ebh, klo2, khi2)
+        vals = (dt, ea1, eah, eb1, ebh, klo2, khi2, self.cfg.drag_k2)
         if vals != self._pkey:
             self.P.copy_(self.torch.tensor(vals, dtype=self.rdt))
             self._pkey = vals

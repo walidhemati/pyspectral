@@ -121,3 +121,13 @@ def test_forcing_band_injects_energy():
     s.set_state(w0)
     s.advance(10, 0.01)
     assert np.allclose(s.get_state(), w0 * math.exp(0.1), rtol=1e-12, atol=1e-9)
+
+
+def test_large_scale_drag_only_below_kmax():
+    n = 16
+    cfg = Config(n=n, dim=2, nu=0.0, alpha=1.0, alpha_kmax=1.5, dtype="float64")
+    s = NumpySolver(cfg)
+    k2 = s.k2
+    L = s.linear_operator(k2)
+    assert L[1, 1] == -1.0  # |k| = sqrt(2) <= 1.5: damped
+    assert L[2, 0] == 0.0  # |k| = 2: free

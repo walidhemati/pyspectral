@@ -20,9 +20,10 @@ from pyspectral.grid import wavenumbers
 from pyspectral.ops import TorchOps
 
 # coefficient vector layout: [dt, nu, alpha, amp, klo2, khi2,
-#                             aE, aEh, a0, pE, pEh, qEh, q1, r]
+#                             aE, aEh, a0, pE, pEh, qEh, q1, r, ka2]
 _IDX = {k: i for i, k in enumerate(
-    ["dt", "nu", "alpha", "amp", "klo2", "khi2", "aE", "aEh", "a0", "pE", "pEh", "qEh", "q1", "r"])}
+    ["dt", "nu", "alpha", "amp", "klo2", "khi2", "aE", "aEh", "a0", "pE", "pEh", "qEh", "q1", "r",
+     "ka2"])}
 
 
 def _stage_coeffs(stage: int, dt: float) -> dict[str, float]:
@@ -37,7 +38,8 @@ def _stage_coeffs(stage: int, dt: float) -> dict[str, float]:
 
 
 def _factors(c: Any, k2: Any) -> tuple[Any, Any]:
-    L = -(c[1] * k2 + c[2]) + c[3] * ((k2 >= c[4]) & (k2 <= c[5])).to(k2.dtype)
+    L = (-(c[1] * k2 + c[2] * (k2 <= c[14]).to(k2.dtype))
+         + c[3] * ((k2 >= c[4]) & (k2 <= c[5])).to(k2.dtype))
     return (L * c[0]).exp(), (L * (0.5 * c[0])).exp()
 
 
@@ -221,6 +223,7 @@ class TorchCompileSolver(SpectralSolver):
             v[_IDX["amp"]] = self.force_amp
             v[_IDX["klo2"]] = cfg.force_klo**2 if on else 1.0
             v[_IDX["khi2"]] = cfg.force_khi**2 if on else 0.0
+            v[_IDX["ka2"]] = cfg.drag_k2
             for name, val in _stage_coeffs(stage, dt).items():
                 v[_IDX[name]] = val
             self.c.copy_(self.torch.as_tensor(v))

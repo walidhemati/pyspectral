@@ -14,9 +14,10 @@ class Config:
     """Physical and numerical parameters of a periodic-box run (box side ``2*pi``).
 
     The linear operator, integrated exactly by the integrating factor, is
-    ``L(k) = -(nu*k^2 + alpha) + force_amp * [force_klo <= |k| <= force_khi]``:
-    viscosity, uniform linear drag (2D Ekman friction) and band-limited linear forcing
-    (negative viscosity in a wavenumber band, Lundgren-style forcing in spectral space).
+    ``L(k) = -(nu*k^2 + alpha*[|k| <= alpha_kmax]) + force_amp*[force_klo <= |k| <= force_khi]``:
+    viscosity, linear drag (uniform Ekman friction if ``alpha_kmax == 0``, otherwise large-scale
+    friction on ``|k| <= alpha_kmax`` only) and band-limited linear forcing (negative viscosity
+    in a wavenumber band, Lundgren-style forcing in spectral space).
 
     ``form`` selects how the nonlinear term is evaluated (it fixes the FFT count):
     2D ``basdevant`` (4 FFTs/stage) or ``advective`` (5); 3D ``rotational`` u x omega (9)
@@ -28,6 +29,7 @@ class Config:
     dim: int = 2
     nu: float = 1e-3
     alpha: float = 0.0
+    alpha_kmax: float = 0.0
     force_amp: float = 0.0
     force_klo: float = 0.0
     force_khi: float = 0.0
@@ -53,6 +55,11 @@ class Config:
         if self.form != "auto":
             return self.form
         return default or "basdevant"
+
+    @property
+    def drag_k2(self) -> float:
+        """Upper k^2 of the drag band (huge if the drag is uniform)."""
+        return self.alpha_kmax**2 if self.alpha_kmax > 0 else 1e30
 
     def with_(self, **kw: object) -> Config:
         """Return a copy with some fields replaced."""
