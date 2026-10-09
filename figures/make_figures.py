@@ -103,10 +103,22 @@ def _largest(doc: dict, dim: int, dtype: str = "float32") -> int | None:
     return max(ns) if ns else None
 
 
+def _ladder_size(doc: dict, dim: int, dtype: str = "float32") -> int | None:
+    """Largest size at which (nearly) every GPU rung ran."""
+    by: dict[int, set] = {}
+    for r in runs(doc, dim, dtype):
+        if r["backend"] != "numpy":
+            by.setdefault(r["size"][0], set()).add(vname(r))
+    if not by:
+        return None
+    full = max(len(v) for v in by.values())
+    return max(n for n, v in by.items() if len(v) >= 0.8 * full)
+
+
 def fig_roofline(doc: dict) -> None:
     fig, axes = plt.subplots(1, 2, figsize=(FULL_W, 2.8), sharey=False)
     for ax, dim in zip(axes, (2, 3), strict=True):
-        n = _largest(doc, dim)
+        n = _ladder_size(doc, dim)
         rs = [r for r in runs(doc, dim) if r["size"][0] == n and r.get("pct_fft_roofline")
               and (r["form"] == "basdevant" or "textbook" in r["variant"])]
         rs = sorted(rs, key=lambda r: LADDER.index(vname(r)) if vname(r) in LADDER else 99)
@@ -132,7 +144,7 @@ def fig_ladder(doc: dict) -> None:
     """Step time at the largest 2D/3D size, against the FFT-only and FFT-roofline times."""
     fig, axes = plt.subplots(1, 2, figsize=(FULL_W, 2.6))
     for ax, dim in zip(axes, (2, 3), strict=True):
-        n = _largest(doc, dim)
+        n = _ladder_size(doc, dim)
         rs = [r for r in runs(doc, dim) if r["size"][0] == n
               and (r["form"] == "basdevant" or "textbook" in r["variant"])]
         rs = sorted(rs, key=lambda r: LADDER.index(vname(r)) if vname(r) in LADDER else 99)
@@ -308,13 +320,19 @@ def write_results_tex(doc: dict | None, v2: dict | None, vb: list | None, tgv: l
             m(f"best{tag}FFTshare", fmt(100 * (best.get("fft_share_of_step") or 0), 0))
             m(f"best{tag}RoofMs", fmt(best.get("roofline_step_ms") or 0, 2))
             m(f"best{tag}FFTMs", fmt(best.get("fft_ceiling_step_ms") or 0, 2))
-            eag = [r for r in rs if vname(r) == "torch-eager/r2c-minfft"]
+            nl = _ladder_size(doc, dim)
+            rl = [r for r in runs(doc, dim) if r["size"][0] == nl and r["backend"] != "numpy"
+                  and (r["form"] == "basdevant" or "textbook" in r["variant"])]
+            bl = min(rl, key=lambda r: r["step_ms"])
+            m(f"ladder{tag}N", str(nl))
+            m(f"ladder{tag}Name", vname(bl))
+            m(f"ladder{tag}Roof", fmt(bl.get("pct_fft_roofline") or 0, 0))
+            eag = [r for r in rl if vname(r) == "torch-eager/r2c-minfft"]
             if eag:
-                m(f"speedup{tag}Eager", fmt(eag[0]["step_ms"] / best["step_ms"], 1))
-            tb = [r for r in runs(doc, dim) if r["size"][0] == n
-                  and vname(r) == "torch-eager/c2c-textbook"]
+                m(f"speedup{tag}Eager", fmt(eag[0]["step_ms"] / bl["step_ms"], 1))
+            tb = [r for r in rl if vname(r) == "torch-eager/c2c-textbook"]
             if tb:
-                m(f"speedup{tag}Textbook", fmt(tb[0]["step_ms"] / best["step_ms"], 1))
+                m(f"speedup{tag}Textbook", fmt(tb[0]["step_ms"] / bl["step_ms"], 1))
             nps = [r for r in runs(doc, dim) if r["backend"] == "numpy"]
             if nps:
                 nmax = max(r["size"][0] for r in nps)
@@ -324,19 +342,26 @@ def write_results_tex(doc: dict | None, v2: dict | None, vb: list | None, tgv: l
                 if gpu:
                     m(f"cpu{tag}N", str(nmax))
                     m(f"speedup{tag}CPU", fmt(cpu["step_ms"] / gpu[0]["step_ms"], 0))
-            rot = [r for r in runs(doc, 3, "float32", "rotational") if r["size"][0] == n
-                   and r["backend"] == "cupy-cuda-c" and r["variant"] == "fused-inplace"]
-            bas = [r for r in rs if vname(r) == "cupy-cuda-c/fused-inplace"]
-            if dim == 3 and rot and bas:
-                m("rotOverBasd", fmt(rot[0]["step_ms"] / bas[0]["step_ms"], 2))
-            f64 = [r for r in runs(doc, dim, "float64", "basdevant") if r["size"][0] == n
-                   and vname(r) == "cupy-cuda-c/fused-inplace"]
-            if f64 and bas:
-                m(f"fpRatio{tag}", fmt(f64[0]["step_ms"] / bas[0]["step_ms"], 1))
+            def at(dt: str, form: str, d: int = dim) -> dict[int, float]:
+                return {r["size"][0]: r["step_ms"] for r in runs(doc, d, dt, form)
+                        if vname(r) == "cupy-cuda-c/fused-inplace"}
+
+            b32 = at("float32", "basdevant")
+            if dim == 3:
+                rot = at("float32", "rotational")
+                common = sorted(set(rot) & set(b32))
+                if common:
+                    m("rotN", str(common[-1]))
+                    m("rotOverBasd", fmt(rot[common[-1]] / b32[common[-1]], 2))
+            f64 = at("float64", "basdevant")
+            common = sorted(set(f64) & set(b32))
+            if common:
+                m(f"fpRatio{tag}N", str(common[-1]))
+                m(f"fpRatio{tag}", fmt(f64[common[-1]] / b32[common[-1]], 1))
         # performance table
         rows = []
         for dim in (2, 3):
-            n = _largest(doc, dim)
+            n = _ladder_size(doc, dim)
             for r in sorted([r for r in runs(doc, dim) if r["size"][0] == n
                              and (r["form"] == "basdevant" or "textbook" in r["variant"])],
                             key=lambda r: r["step_ms"], reverse=True):
@@ -436,7 +461,7 @@ def update_readme(doc: dict | None, v2: dict | None, vb: list | None, tgv: list[
         rows = ["| grid | variant | FFTs/step | ms/step | Mpts/s | GB/s | % copy BW | "
                 "% FFT roofline |", "|---|---|---|---|---|---|---|---|"]
         for dim in (2, 3):
-            n = _largest(doc, dim)
+            n = _ladder_size(doc, dim)
             for r in sorted([r for r in runs(doc, dim) if r["size"][0] == n
                              and (r["form"] == "basdevant" or "textbook" in r["variant"])],
                             key=lambda r: r["step_ms"]):

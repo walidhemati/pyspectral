@@ -268,9 +268,14 @@ Universit\'e catholique de Louvain and cites van Rees et al.~\cite{vanrees2011co
 independent spectral convergence study. The comparison is in \cref{tab:tgv,fig:tgv}. At
 $\tgvN^3$ the peak is \tgvPeak{} at $t=\tgvPeakTime$, against \tgvRefPeak{} at
 $t=\tgvRefPeakTime$ in the reference (\tgvPeakErr\,\% difference). The largest deviation over
-$t\in[0,20]$ is \tgvMaxErr\,\% of the peak value. Coarser grids over-predict the peak, as
-expected for under-resolved Galerkin truncations, where energy piles up near the cutoff. The
-error falls monotonically with $N$.
+$t\in[0,20]$ is \tgvMaxErr\,\% of the peak value. It occurs after the peak, during the
+breakdown into small-scale turbulence. Coarser grids over-predict the peak, as expected for
+under-resolved Galerkin truncations, where energy piles up near the cutoff. The peak error
+falls monotonically with $N$ (\cref{tab:tgv}). The post-peak deviation does not: it is smaller
+at $192^3$ than at $256^3$. Possible causes are the remaining resolution
+gap to the $512^3$ reference, single precision (which can break the flow's discrete symmetries
+earlier than a double-precision run), and the different time integrator of the reference
+(low-storage RK3). We have not separated these effects.
 
 \begin{table}[t]
 \centering
@@ -299,9 +304,10 @@ turbulence (\cref{fig:spectra}). In 2D ($N=\twoN$, forcing at $k\approx4$, drag 
 enstrophy-cascade range has $E(k)\sim k^{\twoSlope}$ for $\twoFit$. That is steeper than
 Kraichnan's $k^{-3}$~\cite{kraichnan1967inertial,boffetta2012two}, as is common at this
 modest scale separation with large-scale friction. In 3D ($N=\threeN$, $k_{\max}\eta=\threeKeta$)
-the Taylor-scale Reynolds number is only $Re_\lambda=\threeRe$, so the compensated spectrum
-shows a short plateau and no extended $k^{-5/3}$ range~\cite{kolmogorov1941local}. The fitted
-slope over $\threeFit$ is $\threeSlope$. Both runs serve as end-to-end tests of the forcing,
+the Taylor-scale Reynolds number is only $Re_\lambda=\threeRe$. The compensated spectrum
+therefore shows only a short plateau just above the forcing scale, followed by the dissipation
+range, and no extended $k^{-5/3}$ range~\cite{kolmogorov1941local}. The local slope over
+$\threeFit$ is $\threeSlope$. Both runs serve as end-to-end tests of the forcing,
 drag and diagnostics machinery. They are not converged turbulence statistics.
 
 \begin{figure}[t]
@@ -352,8 +358,8 @@ grid & variant & FFT & ms/step & Mpts/s & GB/s & \% copy & \% roof\\
 \end{table}
 
 \paragraph{The ladder.} \Cref{fig:scaling,fig:roof,tab:perf} show the progression. Eager PyTorch
-pays for every intermediate array. At $\bestTwoN^2$ the fastest variant is
-\speedupTwoEager$\times$ faster than eager PyTorch with the same FFT count, and
+pays for every intermediate array. At $\ladderTwoN^2$, the largest 2D grid on which every rung
+ran, the fastest variant (\texttt{\ladderTwoName}) is \speedupTwoEager$\times$ faster than eager PyTorch with the same FFT count, and
 \speedupTwoTextbook$\times$ faster than the complex-to-complex textbook version. Against the
 multithreaded NumPy/SciPy reference on 16 CPU threads at $N=\cpuTwoN$ (2D) the speed-up is
 \speedupTwoCPU$\times$. Fusing the pointwise phases into one kernel each (Inductor, CuPy, Warp,
@@ -361,14 +367,13 @@ Triton) removes most of the gap. What remains is mostly the transforms. For iden
 the out-of-place \texttt{torch.fft} and \texttt{cupyx.scipy.fft} calls are measurably slower
 than in-place batched cuFFT plans; both timings are stored with the results. The CUDA C backend with
 in-place batched plans reaches \bestTwoRoof\,\% of the FFT roofline in 2D and \bestThreeRoof\,\%
-in 3D at $\bestThreeN^3$, where the FFTs alone take \bestThreeFFTshare\,\% of the step. Changing
-from the rotational (9 FFTs) to the Basdevant form (8 FFTs) changes the 3D step time by a factor
-of \rotOverBasd{} (rotational/Basdevant). CUDA graphs pay off only on small grids, where launch
+in 3D at $\bestThreeN^3$, where the FFTs alone take \bestThreeFFTshare\,\% of the step. At $\rotN^3$ the rotational form (9 FFTs) takes \rotOverBasd$\times$ the step time of the
+Basdevant form (8 FFTs) in the CUDA C backend. CUDA graphs pay off only on small grids, where launch
 latency dominates.
 
 \paragraph{Precision.} On this consumer GPU, double-precision arithmetic runs at a small fraction
 of single-precision throughput. Double-precision FFTs therefore become compute-bound: at
-$\bestTwoN^2$ an fp64 step of the CUDA C backend takes \fpRatioTwo$\times$ as long as an fp32
+$\fpRatioTwoN^2$ an fp64 step of the CUDA C backend takes \fpRatioTwo$\times$ as long as an fp32
 step, much more than the $2\times$ that the doubled byte count alone would cause
 (\cref{fig:precision}). Production DNS on such hardware is therefore done in fp32. The
 Taylor--Green results above use fp32 and agree with the fp64 reference to the plotting

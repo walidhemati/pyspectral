@@ -283,7 +283,11 @@ def plan(mode: str) -> dict[str, Any]:
                 "variants2d": gpu_2d, "variants3d": gpu_all,
                 "rot": ["cupy-cuda-c/fused-inplace", "triton/fused", "cupy/elementwise",
                         "torch-compile/inductor"],
-                "numpy2d": [256, 512, 1024], "numpy3d": [32, 64], "copy_bytes": 1 << 28}
+                "numpy2d": [256, 512, 1024], "numpy3d": [32, 64], "copy_bytes": 1 << 28,
+                # larger grids only for the memory-frugal fused variants (< ~1 GB)
+                "big2d": [4096], "big3d": [192],
+                "big_variants": ["cupy/elementwise", "warp/fused", "triton/fused",
+                                 "cupy-cuda-c/fused-inplace", "cupy-cuda-c/fused-inplace-graph"]}
     return {"sizes2d": [256, 512, 1024, 2048, 4096, 8192],
             "sizes3d": [64, 96, 128, 192, 256, 320, 384],
             "min_time": 0.5, "repeats": 5, "budget_s": 840,
@@ -303,6 +307,10 @@ def _jobs(p: dict[str, Any]) -> list[tuple[str, int, int, str, str]]:
         for n in sizes:
             for v in variants:
                 jobs.append((v, dim, n, "float32", "basdevant" if "textbook" not in v else "auto"))
+    for dim, sizes in ((2, p.get("big2d", [])), (3, p.get("big3d", []))):
+        for n in sizes:
+            for v in p["big_variants"]:
+                jobs.append((v, dim, n, "float32", "basdevant"))
     for dim, sizes in ((2, p["sizes2d"]), (3, p["sizes3d"])):
         for n in sizes:
             for v in p["fp64"]:

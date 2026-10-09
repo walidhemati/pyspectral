@@ -32,4 +32,4 @@ chunked --what tgv3d --n 256 --backend cupy-cuda-c/fused-inplace-lean --checkpoi
 chunked --what forced2d --n 512 --nu 5e-5 --alpha 0.2 --alpha-kmax 2.5 --klo 3.5 --khi 4.5 \
   --power 0.01 --t-end 60 --t-avg 30 --kfit0 15 --kfit1 50 --checkpoint "$CK/f2.npz"
 chunked --what forced3d --n 192 --nu 0.003 --klo 0.5 --khi 2.5 --power 0.1 --t-end 20 \
-  --t-avg 8 --kfit0 4 --kfit1 16 --checkpoint "$CK/f3.npz"
+  --t-avg 8 --kfit0 3 --kfit1 8 --checkpoint "$CK/f3.npz"
