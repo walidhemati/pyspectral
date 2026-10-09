@@ -18,8 +18,8 @@
 
 | | grid | fastest variant | time / RK4 step | throughput | % of FFT roofline | effective BW (% of 361 GB/s) |
 |---|---|---|---|---|---|---|
-| 2D | $4096^2$ | `cupy-cuda-c/fused-inplace-graph` | 39.81 ms | 421 Mpts/s | 101 % | 126 GB/s (35 %) |
-| 3D | $192^3$ | `cupy/elementwise` | 40.69 ms | 174 Mpts/s | 96 % | 113 GB/s (31 %) |
+| 2D | $4096^2$ | `cupy-cuda-c/fused-inplace-lean` | 27.05 ms | 620 Mpts/s | 99 % | 186 GB/s (52 %) |
+| 3D | $192^3$ | `cupy-cuda-c/fused-inplace-lean` | 22.41 ms | 316 Mpts/s | 103 % | 205 GB/s (57 %) |
 
 GPU: NVIDIA GeForce RTX 3070 Laptop GPU, fp32, 5 repeats (median).
 <!-- headline:end -->
@@ -100,25 +100,25 @@ dissipation history distributed by the 1st International Workshop on High-Order 
 <!-- perf-table:start -->
 | grid | variant | FFTs/step | ms/step | Mpts/s | GB/s | % copy BW | % FFT roofline |
 |---|---|---|---|---|---|---|---|
-| $2048^2$ | `cupy/elementwise` | 16 | 13.53 | 310 | 93 | 26 | 84 |
-| $2048^2$ | `cupy-cuda-c/fused-inplace` | 16 | 14.78 | 284 | 85 | 24 | 77 |
-| $2048^2$ | `cupy-cuda-c/fused-inplace-graph` | 16 | 14.86 | 282 | 85 | 23 | 76 |
-| $2048^2$ | `triton/fused` | 16 | 20.70 | 203 | 61 | 17 | 55 |
-| $2048^2$ | `warp/fused` | 16 | 20.79 | 202 | 61 | 17 | 55 |
-| $2048^2$ | `torch-eager/r2c-textbook` | 20 | 26.33 | 159 | 58 | 16 | 35 |
-| $2048^2$ | `torch-compile/inductor` | 16 | 33.18 | 126 | 38 | 11 | 34 |
-| $2048^2$ | `torch-eager/r2c-minfft` | 16 | 41.32 | 102 | 30 | 8 | 27 |
-| $2048^2$ | `torch-eager/c2c-textbook` | 20 | 80.44 | 52 | 19 | 5 | 11 |
-| $128^3$ | `warp/fused` | 32 | 13.05 | 161 | 104 | 29 | 111 |
-| $128^3$ | `cupy-cuda-c/fused-inplace` | 32 | 15.91 | 132 | 86 | 24 | 91 |
-| $128^3$ | `cupy-cuda-c/fused-inplace-graph` | 32 | 15.98 | 131 | 85 | 24 | 91 |
-| $128^3$ | `cupy-cuda-c/fused-inplace-lean` | 32 | 16.51 | 127 | 83 | 23 | 88 |
-| $128^3$ | `cupy/elementwise` | 32 | 17.71 | 118 | 77 | 21 | 82 |
-| $128^3$ | `triton/fused` | 32 | 23.25 | 90 | 59 | 16 | 62 |
-| $128^3$ | `torch-compile/inductor` | 32 | 34.82 | 60 | 39 | 11 | 42 |
-| $128^3$ | `torch-eager/r2c-textbook` | 36 | 43.20 | 49 | 35 | 10 | 35 |
-| $128^3$ | `torch-eager/r2c-minfft` | 32 | 46.24 | 45 | 29 | 8 | 31 |
-| $128^3$ | `torch-eager/c2c-textbook` | 36 | 105.36 | 20 | 14 | 4 | 14 |
+| $2048^2$ | `cupy-cuda-c/fused-inplace-graph` | 16 | 6.42 | 653 | 196 | 54 | 95 |
+| $2048^2$ | `cupy-cuda-c/fused-inplace` | 16 | 6.46 | 649 | 195 | 54 | 95 |
+| $2048^2$ | `triton/fused` | 16 | 9.07 | 462 | 139 | 38 | 67 |
+| $2048^2$ | `warp/fused` | 16 | 9.11 | 461 | 138 | 38 | 67 |
+| $2048^2$ | `cupy/elementwise` | 16 | 10.12 | 414 | 124 | 34 | 60 |
+| $2048^2$ | `torch-compile/inductor` | 16 | 10.76 | 390 | 117 | 32 | 57 |
+| $2048^2$ | `torch-eager/r2c-minfft` | 16 | 18.06 | 232 | 70 | 19 | 34 |
+| $2048^2$ | `torch-eager/r2c-textbook` | 20 | 19.82 | 212 | 77 | 21 | 38 |
+| $2048^2$ | `torch-eager/c2c-textbook` | 20 | 34.89 | 120 | 44 | 12 | 22 |
+| $128^3$ | `cupy-cuda-c/fused-inplace-graph` | 32 | 6.60 | 318 | 207 | 57 | 104 |
+| $128^3$ | `cupy-cuda-c/fused-inplace` | 32 | 6.65 | 315 | 205 | 57 | 103 |
+| $128^3$ | `cupy-cuda-c/fused-inplace-lean` | 32 | 6.77 | 310 | 201 | 56 | 102 |
+| $128^3$ | `warp/fused` | 32 | 8.71 | 241 | 156 | 43 | 79 |
+| $128^3$ | `triton/fused` | 32 | 8.74 | 240 | 156 | 43 | 79 |
+| $128^3$ | `cupy/elementwise` | 32 | 9.34 | 224 | 146 | 40 | 74 |
+| $128^3$ | `torch-compile/inductor` | 32 | 10.95 | 192 | 125 | 34 | 63 |
+| $128^3$ | `torch-eager/r2c-textbook` | 36 | 23.96 | 88 | 63 | 17 | 32 |
+| $128^3$ | `torch-eager/r2c-minfft` | 32 | 24.13 | 87 | 56 | 16 | 28 |
+| $128^3$ | `torch-eager/c2c-textbook` | 36 | 43.27 | 48 | 35 | 10 | 18 |
 <!-- perf-table:end -->
 
 The traffic model behind "GB/s" counts one read and one write per FFT, a lower bound, since

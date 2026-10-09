@@ -26,6 +26,7 @@ class Variant:
     gpu: bool
     description: str
     kwargs: dict[str, Any] = field(default_factory=dict)
+    default: bool = False  # what a bare backend name resolves to
 
     @property
     def name(self) -> str:
@@ -81,7 +82,8 @@ REGISTRY: list[Variant] = [
     Variant("triton", "fused", "triton_fused", "TritonSolver", COLORS["triton"], True,
             "Triton fused kernels + torch.fft into preallocated buffers"),
     Variant("cupy-cuda-c", "fused-inplace", "cupy_cuda", "CupyCudaSolver", COLORS["cupy-cuda-c"],
-            True, "hand-written CUDA C (NVRTC) fused kernels + in-place batched cuFFT plans"),
+            True, "hand-written CUDA C (NVRTC) fused kernels + in-place batched cuFFT plans",
+            default=True),
     Variant("cupy-cuda-c", "fused-inplace-lean", "cupy_cuda", "CupyCudaLeanSolver",
             COLORS["cupy-cuda-c"], True, "as above, single-field FFT plans (minimal memory)"),
     Variant("cupy-cuda-c", "fused-inplace-graph", "cupy_cuda", "CupyCudaGraphSolver",
@@ -95,13 +97,13 @@ def names() -> list[str]:
 
 
 def get(name: str) -> Variant:
-    """Look up ``backend/variant``; a bare backend name returns its last (fastest) variant."""
+    """Look up ``backend/variant``; a bare backend name returns its default (else last) variant."""
     for v in REGISTRY:
         if v.name == name:
             return v
     matches = [v for v in REGISTRY if v.backend == name]
     if matches:
-        return matches[-1]
+        return next((v for v in matches if v.default), matches[-1])
     raise KeyError(f"unknown backend {name!r}; choose from {names()}")
 
 

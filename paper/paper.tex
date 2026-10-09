@@ -156,8 +156,9 @@ GPUs~\cite{ravikumar2019gpu,yeung2025gpu}. Those codes target aggregate throughp
 supercomputers. Our claim is narrower: per-GPU hardware efficiency from Python.
 
 \paragraph{Python for spectral DNS.} Mortensen and Langtangen~\cite{mortensen2016high} report that
-their pure-Python solver is about 30\,\% slower than their own C++ port in serial runs. On a Blue
-Gene/P their optimised version matched C++ across processor counts. Dedalus~\cite{burns2020dedalus}
+their own C++ port is about 30\,\% faster than their pure-Python solver in serial runs on a
+laptop CPU. On a Blue Gene/P their Cython-optimised version performed as well as C++ across the
+processor counts they tested. Dedalus~\cite{burns2020dedalus}
 generalises spectral methods to many equations and bases. Neither targets GPUs. On the GPU side,
 Python now offers several kernel-generation routes: PyTorch~\cite{paszke2019pytorch} and its
 compiler~\cite{ansel2024pytorch2}, Triton~\cite{tillet2019triton}, CuPy~\cite{okuta2017cupy}
@@ -239,8 +240,8 @@ correctness oracle and runs in CI. The GPU backends form a ladder:
 \item[torch-compile] writes the two pointwise phases as plain PyTorch on real views of the
   complex buffers. TorchInductor compiles them into fused Triton kernels. Stage coefficients and
   $\Delta t$ come from a device tensor, so adaptive steps never trigger recompilation.
-\item[cupy] fuses each phase into one \texttt{ElementwiseKernel} and calls the
-  SciPy-compatible \texttt{cupyx.scipy.fft} API (cached plans, out-of-place).
+\item[cupy] fuses each phase into one \texttt{ElementwiseKernel}. FFTs go through the
+  SciPy-compatible API of CuPy, with cached plans and out-of-place transforms.
 \item[warp, triton] use hand-written fused kernels in NVIDIA Warp and Triton. They run on
   preallocated torch buffers with \texttt{torch.fft} transforms written into fixed output
   buffers. The forward-FFT output doubles as the next inverse-FFT input.
@@ -278,7 +279,10 @@ T_{\rm roof} = 4\,t_{\rm FFT} + B/B_{\rm copy},\qquad B_{\rm copy}=\SI{361}{GB/s
 \end{equation}
 where $B_{\rm copy}$ is the device-to-device copy bandwidth measured for the whole suite (the
 datasheet value is \SI{448}{GB/s}). We report $T_{\rm roof}/T_{\rm step}$ as ``\% of FFT
-roofline''. For the conventional bandwidth view we also count each FFT as one read and one
+roofline''. The model is additive and ignores overlap and cache reuse between consecutive
+kernels. A fused solver can therefore come in slightly above 100\,\%, for example when part
+of a field is still in the 4\,MB L2 cache, or when its pointwise kernels stream faster than
+the copy bandwidth used in the model. For the conventional bandwidth view we also count each FFT as one read and one
 write of its data, which is a lower bound because real 2D/3D FFTs take several passes. Adding
 $B$ gives an effective bandwidth that can only be under-, never over-estimated. Throughput is
 given in Mpts/s, grid points advanced by one full RK4 step per second.
