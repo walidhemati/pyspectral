@@ -185,8 +185,8 @@ def fft_ceiling(n: int, dim: int, form: str, dtype: str, min_time: float, repeat
             out["cupy_inplace_graph_stage_s"] = float(np.median(ts_g)) / 10
         except Exception as e:  # noqa: BLE001
             out["cupy_graph_error"] = f"{type(e).__name__}: {e}"
-        ts_i, _ = _time_fn(lambda: inv.fft(W, W, cf.CUFFT_INVERSE), sync, min_time / 2, 3)
-        ts_f, _ = _time_fn(lambda: fwd.fft(W, W, cf.CUFFT_FORWARD), sync, min_time / 2, 3)
+        ts_i, _ = _time_fn(lambda: inv.fft(W, W, cf.CUFFT_INVERSE), sync, min_time / 4, 3)
+        ts_f, _ = _time_fn(lambda: fwd.fft(W, W, cf.CUFFT_FORWARD), sync, min_time / 4, 3)
         out["cupy_c2r_batch_s"] = float(np.median(ts_i))
         out["cupy_r2c_batch_s"] = float(np.median(ts_f))
     except Exception as e:  # noqa: BLE001
@@ -269,7 +269,7 @@ def time_solver(name: str, n: int, dim: int, dtype: str, form: str, min_time: fl
     s.set_state(initial.to_spectral(ic, dim))
     dt = 0.2 * (2 * math.pi / n) / 4.0
     t0 = time.perf_counter()
-    for _ in range(3):  # warm-up: JIT/compile, plan creation, autotuning
+    for _ in range(2):  # warm-up: JIT/compile, plan creation, autotuning
         s.step(dt)
     s.synchronize()
     warm = time.perf_counter() - t0
@@ -303,15 +303,17 @@ def plan(mode: str) -> dict[str, Any]:
                 # larger grids only for the leanest variant (keeps the shared GPU < ~1 GB)
                 "big2d": [4096], "big3d": [192],
                 "big_variants": ["cupy-cuda-c/fused-inplace-lean"]}
-    return {"sizes2d": [256, 512, 1024, 2048, 4096, 8192],
-            "sizes3d": [64, 96, 128, 192, 256, 320, 384],
-            "min_time": 0.5, "repeats": 5, "budget_s": 840,
-            "fp64": ["cupy-cuda-c/fused-inplace", "triton/fused", "torch-eager/r2c-minfft",
-                     "cupy/elementwise"],
-            "variants2d": gpu_2d, "variants3d": gpu_all,
-            "rot": ["cupy-cuda-c/fused-inplace", "triton/fused", "cupy/elementwise",
-                    "torch-compile/inductor"],
-            "numpy2d": [256, 512, 1024, 2048], "numpy3d": [32, 64, 128], "copy_bytes": 1 << 30}
+    # full: idle GPU, < 15 min. Priority order = job order; a time budget skips the tail.
+    return {"sizes2d": [256, 1024, 2048, 4096, 8192], "sizes3d": [64, 128, 192, 256, 384],
+            "min_time": 0.5, "repeats": 5, "budget_s": 780,
+            "fp64": ["cupy-cuda-c/fused-inplace"],
+            "variants2d": gpu_2d, "variants3d": [x for x in gpu_all if not x.endswith("-lean")],
+            "rot": ["cupy-cuda-c/fused-inplace"],
+            # skip combinations that only measure an out-of-memory error
+            "max_n": {("torch-eager/c2c-textbook", 2): 4096, ("torch-eager/c2c-textbook", 3): 192},
+            "big2d": [], "big3d": [384], "big_variants": ["cupy-cuda-c/fused-inplace-lean"],
+            "numpy2d": [256, 1024, 2048], "numpy3d": [64, 128], "numpy_dtypes": ["float32"],
+            "copy_bytes": 1 << 30}
 
 
 def _jobs(p: dict[str, Any]) -> list[tuple[str, int, int, str, str]]:
@@ -321,6 +323,8 @@ def _jobs(p: dict[str, Any]) -> list[tuple[str, int, int, str, str]]:
                                  (3, p["sizes3d"], p["variants3d"])):
         for n in sizes:
             for v in variants:
+                if n > p.get("max_n", {}).get((v, dim), 1 << 30):
+                    continue
                 jobs.append((v, dim, n, "float32", "basdevant" if "textbook" not in v else "auto"))
     for dim, sizes in ((2, p.get("big2d", [])), (3, p.get("big3d", []))):
         for n in sizes:
@@ -333,12 +337,10 @@ def _jobs(p: dict[str, Any]) -> list[tuple[str, int, int, str, str]]:
     for n in p["sizes3d"]:
         for v in p["rot"]:
             jobs.append((v, 3, n, "float32", "rotational"))
-    for n in p["numpy2d"]:
-        for dt in ("float32", "float64"):
-            jobs.append(("numpy/scipy-fft", 2, n, dt, "basdevant"))
-    for n in p["numpy3d"]:
-        for dt in ("float32", "float64"):
-            jobs.append(("numpy/scipy-fft", 3, n, dt, "basdevant"))
+    for dim, sizes in ((2, p["numpy2d"]), (3, p["numpy3d"])):
+        for n in sizes:
+            for dt in p.get("numpy_dtypes", ["float32", "float64"]):
+                jobs.append(("numpy/scipy-fft", dim, n, dt, "basdevant"))
     return jobs
 
 

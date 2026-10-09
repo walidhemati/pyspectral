@@ -20,3 +20,4 @@ paper/*.synctex.gz
 # scratch
 scratch/
 *.npz
+results/quick.json
