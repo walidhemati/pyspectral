@@ -1,0 +1,12 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+title: "pyspectral: pseudo-spectral turbulence DNS near the FFT roofline from Python"
+authors:
+  - family-names: Hemati
+    given-names: Walid
+    affiliation: Independent researcher
+version: 0.1.0
+date-released: 2026-10-09
+license: MIT
+repository-code: "https://github.com/walidhemati/pyspectral"
+keywords: [turbulence, direct numerical simulation, pseudo-spectral, FFT, GPU, roofline, Python]
