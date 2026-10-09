@@ -25,13 +25,14 @@ class NumpySolver(SpectralSolver):
     variant = "scipy-fft"
     phase_shift = True
 
-    def __init__(self, cfg: Config, integrator: str = "ifrk4", workers: int = -1,
+    def __init__(self, cfg: Config, integrator: str = "ifrk4", workers: int | None = None,
                  seed: int = 1234) -> None:
         super().__init__(cfg)
         if integrator not in ("ifrk4", "rk4"):
             raise ValueError(integrator)
         self.integrator = integrator
-        self.workers = workers
+        # threads only pay off on large grids
+        self.workers = workers if workers is not None else (-1 if cfg.n**cfg.dim >= 2**16 else 1)
         self.rdt = np.float64 if cfg.is_fp64 else np.float32
         self.cdt = np.complex128 if cfg.is_fp64 else np.complex64
         n, d = self.n, self.dim

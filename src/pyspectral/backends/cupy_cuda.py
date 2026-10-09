@@ -37,7 +37,7 @@ class CupyCudaSolver(SpectralSolver):
     default_form = "basdevant"
     forms = ("basdevant", "rotational")
 
-    def __init__(self, cfg: Config, graph: bool = False) -> None:
+    def __init__(self, cfg: Config, graph: bool = False, batched: bool = True) -> None:
         super().__init__(cfg)
         if self.dim == 2 and self.form != "basdevant":
             raise BackendUnavailable("cupy-cuda-c: 2D supports the basdevant form only")
@@ -72,6 +72,9 @@ class CupyCudaSolver(SpectralSolver):
             self.k_pre = k("pre3d")
             self.k_phys = k("phys3d_rot" if self.rot else "phys3d_basd")
             self.k_post = k("post3d")
+        # batched plans need a cuFFT work area as large as the whole batch; ``batched=False``
+        # loops over single-field plans (work area of one field) for memory-lean big runs
+        self.batched = batched
         self.plan_inv, self.plan_fwd = self._make_plans()
         self.scale = self.rdt(1.0 / float(n) ** d)
         self._ops = CupyOps()
@@ -103,19 +106,26 @@ class CupyCudaSolver(SpectralSolver):
         fp64 = self.cfg.is_fp64
         c2r = cf.CUFFT_Z2D if fp64 else cf.CUFFT_C2R
         r2c = cf.CUFFT_D2Z if fp64 else cf.CUFFT_R2C
-        inv = cf.PlanNd(shape, cemb, 1, self.fsc, remb, 1, self.fsr, c2r, self.n_inv, "C", -1,
-                        None)
-        fwd = cf.PlanNd(shape, remb, 1, self.fsr, cemb, 1, self.fsc, r2c, self.n_fwd, "C", -1,
-                        None)
+        bi, bf = (self.n_inv, self.n_fwd) if self.batched else (1, 1)
+        inv = cf.PlanNd(shape, cemb, 1, self.fsc, remb, 1, self.fsr, c2r, bi, "C", -1, None)
+        fwd = cf.PlanNd(shape, remb, 1, self.fsr, cemb, 1, self.fsc, r2c, bf, "C", -1, None)
         return inv, fwd
 
     def fft_inverse(self) -> None:
         """Batched in-place C2R on the work buffer."""
-        self.plan_inv.fft(self.W, self.W, self.cufft.CUFFT_INVERSE)
+        if self.batched:
+            self.plan_inv.fft(self.W, self.W, self.cufft.CUFFT_INVERSE)
+        else:
+            for i in range(self.n_inv):
+                self.plan_inv.fft(self.W[i], self.W[i], self.cufft.CUFFT_INVERSE)
 
     def fft_forward(self) -> None:
         """Batched in-place R2C on the work buffer."""
-        self.plan_fwd.fft(self.W, self.W, self.cufft.CUFFT_FORWARD)
+        if self.batched:
+            self.plan_fwd.fft(self.W, self.W, self.cufft.CUFFT_FORWARD)
+        else:
+            for i in range(self.n_fwd):
+                self.plan_fwd.fft(self.W[i], self.W[i], self.cufft.CUFFT_FORWARD)
 
     # ------------------------------------------------------------------ state
     def _grid(self, count: int) -> tuple[int]:
@@ -172,17 +182,25 @@ class CupyCudaSolver(SpectralSolver):
         if g is None:
             if len(self._graphs) > 8:
                 self._graphs.clear()
+            cur = self.cp.cuda.get_current_stream()
+            cur.synchronize()
             stream = self.cp.cuda.Stream(non_blocking=True)
             with stream:
                 stream.begin_capture()
                 for s in range(4):
                     self._stage(s, sc)
                 g = stream.end_capture()
-            self._graphs[key] = (g, stream)
-            g = self._graphs[key]
-        graph, stream = g
-        graph.launch(stream)
-        stream.synchronize()
+            self._graphs[key] = g
+        g.launch(self.cp.cuda.get_current_stream())
+
+
+class CupyCudaLeanSolver(CupyCudaSolver):
+    """Single-field cuFFT plans looped over the batch: smallest memory footprint."""
+
+    variant = "fused-inplace-lean"
+
+    def __init__(self, cfg: Config) -> None:
+        super().__init__(cfg, batched=False)
 
 
 class CupyCudaGraphSolver(CupyCudaSolver):

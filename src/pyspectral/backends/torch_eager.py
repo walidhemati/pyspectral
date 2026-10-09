@@ -120,7 +120,8 @@ class TorchEagerSolver(SpectralSolver):
                 q = self._fwd(torch.stack([v * v - u * u, u * v]))
                 nl = kx * ky * q[0] + (kx * kx - ky * ky) * q[1]
             else:
-                r = self._inv(torch.stack([1j * ky * psi, -1j * kx * psi, 1j * kx * w, 1j * ky * w]))
+                r = self._inv(torch.stack([1j * ky * psi, -1j * kx * psi,
+                                           1j * kx * w, 1j * ky * w]))
                 nl = -self._fwd(r[0] * r[2] + r[1] * r[3])
             return nl * ms * self.mask
         k = self.k

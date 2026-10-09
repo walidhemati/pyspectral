@@ -43,8 +43,10 @@ target-version = "py310"
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "B", "UP", "N", "SIM"]
-ignore = ["N803", "N806", "N802", "E741"]
+ignore = ["N803", "N806", "N802", "E741", "N818", "N812"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["src"]
+filterwarnings = ["ignore::UserWarning"]
 markers = ["gpu: requires a CUDA GPU", "slow: long-running test"]

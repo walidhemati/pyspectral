@@ -42,13 +42,13 @@ def _shaped_noise(n: int, dim: int, k0: float, seed: int, ncomp: int) -> np.ndar
 
 
 def random_2d(n: int, k0: float = 8.0, seed: int = 0, energy: float = 0.5) -> np.ndarray:
-    """Random-phase vorticity with energy spectrum ~ k^4 exp(-2(k/k0)^2), kinetic energy ``energy``."""
+    """Random-phase vorticity, energy spectrum ~ k^4 exp(-2(k/k0)^2), kinetic energy ``energy``."""
     nh = _shaped_noise(n, 2, k0, seed, 1)[0]
     k2 = sum(k * k for k in wavenumbers(n, 2))
     w8 = hermitian_weights(n, 2)
     with np.errstate(divide="ignore", invalid="ignore"):
         e = 0.5 * np.sum(np.where(k2 > 0, w8 * np.abs(nh) ** 2 / k2, 0.0)) / float(n) ** 4
-    return np.fft.irfftn(nh, s=(n, n)) * np.sqrt(energy / e)
+    return np.fft.irfftn(nh, s=(n, n), axes=(0, 1)) * np.sqrt(energy / e)
 
 
 def taylor_green_3d(n: int) -> np.ndarray:
