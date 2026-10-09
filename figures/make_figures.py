@@ -343,10 +343,12 @@ def write_results_tex(doc: dict | None, v2: dict | None, vb: list | None, tgv: l
                 nmax = max(r["size"][0] for r in nps)
                 cpu = [r for r in nps if r["size"][0] == nmax][0]
                 gpu = [r for r in runs(doc, dim) if r["size"][0] == nmax
-                       and vname(r) == vname(best)]
+                       and r["backend"] != "numpy" and r["form"] == "basdevant"]
                 if gpu:
+                    g = min(gpu, key=lambda r: r["step_ms"])
                     m(f"cpu{tag}N", str(nmax))
-                    m(f"speedup{tag}CPU", fmt(cpu["step_ms"] / gpu[0]["step_ms"], 0))
+                    m(f"cpu{tag}GPUName", vname(g))
+                    m(f"speedup{tag}CPU", fmt(cpu["step_ms"] / g["step_ms"], 0))
             def at(dt: str, form: str, d: int = dim) -> dict[int, float]:
                 return {r["size"][0]: r["step_ms"] for r in runs(doc, d, dt, form)
                         if vname(r) == "cupy-cuda-c/fused-inplace"}

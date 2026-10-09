@@ -29,6 +29,8 @@
 \providecommand{\bestTwoRoof}{n/a}
 \providecommand{\copyBW}{n/a}
 \providecommand{\cpuTwoN}{n/a}
+\providecommand{\cpuThreeN}{n/a}
+\providecommand{\speedupThreeCPU}{n/a}
 \providecommand{\fpRatioTwo}{n/a}
 \providecommand{\fpRatioTwoN}{n/a}
 \providecommand{\gpuName}{n/a}
@@ -415,8 +417,9 @@ grid & variant & FFT & ms/step & Mpts/s & GB/s & \% copy & \% roof\\
 pays for every intermediate array. At $\ladderTwoN^2$, the largest 2D grid on which every rung
 ran, the fastest variant (\texttt{\ladderTwoName}) is \speedupTwoEager$\times$ faster than eager PyTorch with the same FFT count, and
 \speedupTwoTextbook$\times$ faster than the complex-to-complex textbook version. Against the
-multithreaded NumPy/SciPy reference on 16 CPU threads at $N=\cpuTwoN$ (2D) the speed-up is
-\speedupTwoCPU$\times$. Fusing the pointwise phases into one kernel each (Inductor, CuPy, Warp,
+multithreaded NumPy/SciPy reference on 16 CPU threads, the fastest GPU variant is
+\speedupTwoCPU$\times$ faster at $N=\cpuTwoN$ in 2D and \speedupThreeCPU$\times$ faster at
+$N=\cpuThreeN$ in 3D. Fusing the pointwise phases into one kernel each (Inductor, CuPy, Warp,
 Triton) removes most of the gap. What remains is mostly the transforms. For identical shapes,
 the out-of-place \texttt{torch.fft} and \texttt{cupyx.scipy.fft} calls are measurably slower
 than in-place batched cuFFT plans; both timings are stored with the results. At the largest grids the
@@ -430,8 +433,7 @@ latency dominates.
 of single-precision throughput. Double-precision FFTs therefore become compute-bound: at
 $\fpRatioTwoN^2$ an fp64 step of the CUDA C backend takes \fpRatioTwo$\times$ as long as an fp32
 step, much more than the $2\times$ that the doubled byte count alone would cause. Production DNS on such hardware is therefore done in fp32. The
-Taylor--Green results above use fp32 and agree with the fp64 reference to the plotting
-accuracy.
+Taylor--Green results above use fp32.
 
 
 
