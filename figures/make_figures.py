@@ -395,6 +395,90 @@ def write_results_tex(doc: dict | None, v2: dict | None, vb: list | None, tgv: l
     print("wrote paper/results.tex")
 
 
+def _replace_block(text: str, tag: str, body: str) -> str:
+    a, b = f"<!-- {tag}:start -->", f"<!-- {tag}:end -->"
+    if a not in text or b not in text:
+        return text
+    i, j = text.index(a) + len(a), text.index(b)
+    return text[:i] + "\n" + body.strip() + "\n" + text[j:]
+
+
+def update_readme(doc: dict | None, v2: dict | None, vb: list | None, tgv: list[dict],
+                  f2: dict | None, f3: dict | None) -> None:
+    """Fill the generated blocks of README.md from the results JSON."""
+    p = ROOT / "README.md"
+    if not p.exists():
+        return
+    t = p.read_text()
+    if doc:
+        prov = doc.get("provisional", True)
+        lines = []
+        if prov:
+            lines.append("> **Provisional numbers** from a development run on a *shared* GPU "
+                         f"(`bench/run.py --{doc.get('mode', 'dev')}`); the publishable run is "
+                         "`bench/run.py --full` on an idle GPU.\n")
+        lines.append("| | grid | fastest variant | time / RK4 step | throughput | "
+                     "% of FFT roofline | effective BW (% of 361 GB/s) |")
+        lines.append("|---|---|---|---|---|---|---|")
+        for dim in (2, 3):
+            n = _largest(doc, dim)
+            rs = [r for r in runs(doc, dim) if r["size"][0] == n and r["form"] == "basdevant"
+                  and r["backend"] != "numpy"]
+            if not rs:
+                continue
+            b = min(rs, key=lambda r: r["step_ms"])
+            lines.append(f"| {dim}D | ${n}^{dim}$ | `{vname(b)}` | {b['step_ms']:.2f} ms | "
+                         f"{b['value']:.0f} Mpts/s | {b.get('pct_fft_roofline') or 0:.0f} % | "
+                         f"{b['effective_GBs']:.0f} GB/s ({b['pct_copy_bw']:.0f} %) |")
+        lines.append(f"\nGPU: {doc['machine'].get('gpu', '?')}, fp32, "
+                     f"{doc['runs'][0]['repeats']} repeats (median).")
+        t = _replace_block(t, "headline", "\n".join(lines))
+        rows = ["| grid | variant | FFTs/step | ms/step | Mpts/s | GB/s | % copy BW | "
+                "% FFT roofline |", "|---|---|---|---|---|---|---|---|"]
+        for dim in (2, 3):
+            n = _largest(doc, dim)
+            for r in sorted([r for r in runs(doc, dim) if r["size"][0] == n
+                             and (r["form"] == "basdevant" or "textbook" in r["variant"])],
+                            key=lambda r: r["step_ms"]):
+                roof = r.get("pct_fft_roofline")
+                rows.append(f"| ${n}^{dim}$ | `{vname(r)}` | {r['ffts_per_step']} | "
+                            f"{r['step_ms']:.2f} | {r['value']:.0f} | {r['effective_GBs']:.0f} | "
+                            f"{r['pct_copy_bw']:.0f} | {'-' if roof is None else f'{roof:.0f}'} |")
+        t = _replace_block(t, "perf-table", "\n".join(rows))
+    vl = []
+    if v2:
+        e64 = max(r["rel_err"] for r in v2["tgv2d"] if r["dtype"] == "float64")
+        e32 = max(r["rel_err"] for r in v2["tgv2d"] if r["dtype"] == "float32")
+        vl.append(f"| 2D Taylor-Green, exact decay (all {len({r['variant'] for r in v2['tgv2d']})}"
+                  f" variants) | max rel. error {e64:.1e} (fp64), {e32:.1e} (fp32) |")
+        vl.append(f"| RK4 temporal order on exact TGV | {v2['rk4_order']['order_rk4']:.2f} |")
+        if "temporal" in v2:
+            vl.append(f"| IF-RK4 self-convergence, nonlinear 2D flow | order "
+                      f"{v2['temporal']['order']:.2f} |")
+        if "spatial" in v2:
+            vl.append(f"| spectral convergence in $N$ (smooth 2D flow) | error "
+                      f"{min(v2['spatial']['err']):.1e} at $N={max(v2['spatial']['n'])}$ |")
+    if vb:
+        vl.append(f"| every GPU variant vs NumPy fp64 oracle ({len(vb)} cases) | max rel. "
+                  f"{max(r['rel_err'] for r in vb if r['dtype'] == 'float64'):.1e} (fp64), "
+                  f"{max(r['rel_err'] for r in vb if r['dtype'] == 'float32'):.1e} (fp32) |")
+    for d in tgv:
+        vl.append(f"| 3D TGV Re=1600, ${d['n']}^3$ vs $512^3$ reference | peak "
+                  f"$\\varepsilon$ {d['peak_value']:.5f} at t={d['peak_time']:.2f} (ref. "
+                  f"{d['ref_peak_value']:.5f} at {d['ref_peak_time']:.2f}); max dev. "
+                  f"{100 * d['max_abs_err_over_peak']:.1f} % of peak |")
+    if f2:
+        vl.append(f"| forced 2D, $N={f2['n']}$, enstrophy range | "
+                  f"$E(k)\\sim k^{{{f2['slope']:.2f}}}$ (Kraichnan: $k^{{-3}}$) |")
+    if f3:
+        vl.append(f"| forced 3D, $N={f3['n']}$, $Re_\\lambda={f3['re_lambda']:.0f}$ | fitted "
+                  f"slope {f3['slope']:.2f} (K41: $-5/3$) |")
+    if vl:
+        t = _replace_block(t, "validation", "| check | result |\n|---|---|\n" + "\n".join(vl))
+    p.write_text(t)
+    print("updated README.md")
+
+
 def main() -> int:
     doc = load("rtx3070-laptop.json")
     v2 = load("validation_2d.json")
@@ -412,6 +496,7 @@ def main() -> int:
     if f2 or f3:
         fig_spectra(f2, f3)
     write_results_tex(doc, v2, vb, tgv, f2, f3)
+    update_readme(doc, v2, vb, tgv, f2, f3)
     return 0
 
 
