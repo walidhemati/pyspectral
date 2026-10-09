@@ -32,7 +32,7 @@ def main() -> int:
     ap.add_argument("--n", type=int, default=768)
     ap.add_argument("--nu", type=float, default=3e-5)
     ap.add_argument("--t-end", type=float, default=40.0)
-    ap.add_argument("--frames", type=int, default=60)
+    ap.add_argument("--frames", type=int, default=40)
     ap.add_argument("--px", type=int, default=300)
     ap.add_argument("--out", default=str(ROOT / "docs" / "media" / "hero.gif"))
     a = ap.parse_args()
@@ -56,7 +56,7 @@ def main() -> int:
     print(f"{res.steps} steps, {res.wall:.1f} s, {len(frames)} frames")
     out = Path(a.out)
     out.parent.mkdir(parents=True, exist_ok=True)
-    frames[0].save(out, save_all=True, append_images=frames[1:], duration=90, loop=0,
+    frames[0].save(out, save_all=True, append_images=frames[1:], duration=120, loop=0,
                    optimize=True)
     print(f"wrote {out} ({out.stat().st_size / 1e6:.2f} MB)")
     return 0
