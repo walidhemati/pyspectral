@@ -2999,7 +2999,7 @@
     "repeats": 5
    },
    "ranks": 16,
-   "why": "gs)\n           ^^^^^^^^^^^^^^^^^^^^\n  File \"/home/hemati/python-hpc/_ref/envs/spectraldns/lib/python3.12/site-packages/shenfun/optimization/__init__.py\", line 82, in wrapped_function\n    u0 = fun(*args, **kwargs)\n         ^^^^^^^^^^^^^^^^^^^^\n  File \"shenfun/optimization/cython/applymask.pyx\", line 36, in shenfun.optimization.cython.applymask.apply_mask\n  File \"shenfun/optimization/cython/applymask.pyx\", line 108, in shenfun.optimization.cython.applymask.__pyx_fused_cpdef\n  File \"<stringsource>\", line 7, in match_signatures_single.match_signatures_single\nTypeError: No matching signature found\n"
+   "why": "gs)\n           ^^^^^^^^^^^^^^^^^^^^\n  File \"~/python-hpc/_ref/envs/spectraldns/lib/python3.12/site-packages/shenfun/optimization/__init__.py\", line 82, in wrapped_function\n    u0 = fun(*args, **kwargs)\n         ^^^^^^^^^^^^^^^^^^^^\n  File \"shenfun/optimization/cython/applymask.pyx\", line 36, in shenfun.optimization.cython.applymask.apply_mask\n  File \"shenfun/optimization/cython/applymask.pyx\", line 108, in shenfun.optimization.cython.applymask.__pyx_fused_cpdef\n  File \"<stringsource>\", line 7, in match_signatures_single.match_signatures_single\nTypeError: No matching signature found\n"
   },
   {
    "code": "spectralDNS",
@@ -3013,7 +3013,7 @@
     "repeats": 5
    },
    "ranks": 8,
-   "why": "gs)\n           ^^^^^^^^^^^^^^^^^^^^\n  File \"/home/hemati/python-hpc/_ref/envs/spectraldns/lib/python3.12/site-packages/shenfun/optimization/__init__.py\", line 82, in wrapped_function\n    u0 = fun(*args, **kwargs)\n         ^^^^^^^^^^^^^^^^^^^^\n  File \"shenfun/optimization/cython/applymask.pyx\", line 36, in shenfun.optimization.cython.applymask.apply_mask\n  File \"shenfun/optimization/cython/applymask.pyx\", line 108, in shenfun.optimization.cython.applymask.__pyx_fused_cpdef\n  File \"<stringsource>\", line 7, in match_signatures_single.match_signatures_single\nTypeError: No matching signature found\n"
+   "why": "gs)\n           ^^^^^^^^^^^^^^^^^^^^\n  File \"~/python-hpc/_ref/envs/spectraldns/lib/python3.12/site-packages/shenfun/optimization/__init__.py\", line 82, in wrapped_function\n    u0 = fun(*args, **kwargs)\n         ^^^^^^^^^^^^^^^^^^^^\n  File \"shenfun/optimization/cython/applymask.pyx\", line 36, in shenfun.optimization.cython.applymask.apply_mask\n  File \"shenfun/optimization/cython/applymask.pyx\", line 108, in shenfun.optimization.cython.applymask.__pyx_fused_cpdef\n  File \"<stringsource>\", line 7, in match_signatures_single.match_signatures_single\nTypeError: No matching signature found\n"
   },
   {
    "code": "spectralDNS",
@@ -3027,7 +3027,7 @@
     "repeats": 5
    },
    "ranks": 16,
-   "why": "gs)\n           ^^^^^^^^^^^^^^^^^^^^\n  File \"/home/hemati/python-hpc/_ref/envs/spectraldns/lib/python3.12/site-packages/shenfun/optimization/__init__.py\", line 82, in wrapped_function\n    u0 = fun(*args, **kwargs)\n         ^^^^^^^^^^^^^^^^^^^^\n  File \"shenfun/optimization/cython/applymask.pyx\", line 36, in shenfun.optimization.cython.applymask.apply_mask\n  File \"shenfun/optimization/cython/applymask.pyx\", line 108, in shenfun.optimization.cython.applymask.__pyx_fused_cpdef\n  File \"<stringsource>\", line 7, in match_signatures_single.match_signatures_single\nTypeError: No matching signature found\n"
+   "why": "gs)\n           ^^^^^^^^^^^^^^^^^^^^\n  File \"~/python-hpc/_ref/envs/spectraldns/lib/python3.12/site-packages/shenfun/optimization/__init__.py\", line 82, in wrapped_function\n    u0 = fun(*args, **kwargs)\n         ^^^^^^^^^^^^^^^^^^^^\n  File \"shenfun/optimization/cython/applymask.pyx\", line 36, in shenfun.optimization.cython.applymask.apply_mask\n  File \"shenfun/optimization/cython/applymask.pyx\", line 108, in shenfun.optimization.cython.applymask.__pyx_fused_cpdef\n  File \"<stringsource>\", line 7, in match_signatures_single.match_signatures_single\nTypeError: No matching signature found\n"
   },
   {
    "code": "spectralDNS",
@@ -3041,7 +3041,7 @@
     "repeats": 5
    },
    "ranks": 8,
-   "why": "gs)\n           ^^^^^^^^^^^^^^^^^^^^\n  File \"/home/hemati/python-hpc/_ref/envs/spectraldns/lib/python3.12/site-packages/shenfun/optimization/__init__.py\", line 82, in wrapped_function\n    u0 = fun(*args, **kwargs)\n         ^^^^^^^^^^^^^^^^^^^^\n  File \"shenfun/optimization/cython/applymask.pyx\", line 36, in shenfun.optimization.cython.applymask.apply_mask\n  File \"shenfun/optimization/cython/applymask.pyx\", line 108, in shenfun.optimization.cython.applymask.__pyx_fused_cpdef\n  File \"<stringsource>\", line 7, in match_signatures_single.match_signatures_single\nTypeError: No matching signature found\n"
+   "why": "gs)\n           ^^^^^^^^^^^^^^^^^^^^\n  File \"~/python-hpc/_ref/envs/spectraldns/lib/python3.12/site-packages/shenfun/optimization/__init__.py\", line 82, in wrapped_function\n    u0 = fun(*args, **kwargs)\n         ^^^^^^^^^^^^^^^^^^^^\n  File \"shenfun/optimization/cython/applymask.pyx\", line 36, in shenfun.optimization.cython.applymask.apply_mask\n  File \"shenfun/optimization/cython/applymask.pyx\", line 108, in shenfun.optimization.cython.applymask.__pyx_fused_cpdef\n  File \"<stringsource>\", line 7, in match_signatures_single.match_signatures_single\nTypeError: No matching signature found\n"
   },
   {
    "code": "spectralDNS",
@@ -3055,7 +3055,7 @@
     "repeats": 5
    },
    "ranks": 16,
-   "why": "gs)\n           ^^^^^^^^^^^^^^^^^^^^\n  File \"/home/hemati/python-hpc/_ref/envs/spectraldns/lib/python3.12/site-packages/shenfun/optimization/__init__.py\", line 82, in wrapped_function\n    u0 = fun(*args, **kwargs)\n         ^^^^^^^^^^^^^^^^^^^^\n  File \"shenfun/optimization/cython/applymask.pyx\", line 36, in shenfun.optimization.cython.applymask.apply_mask\n  File \"shenfun/optimization/cython/applymask.pyx\", line 108, in shenfun.optimization.cython.applymask.__pyx_fused_cpdef\n  File \"<stringsource>\", line 7, in match_signatures_single.match_signatures_single\nTypeError: No matching signature found\n"
+   "why": "gs)\n           ^^^^^^^^^^^^^^^^^^^^\n  File \"~/python-hpc/_ref/envs/spectraldns/lib/python3.12/site-packages/shenfun/optimization/__init__.py\", line 82, in wrapped_function\n    u0 = fun(*args, **kwargs)\n         ^^^^^^^^^^^^^^^^^^^^\n  File \"shenfun/optimization/cython/applymask.pyx\", line 36, in shenfun.optimization.cython.applymask.apply_mask\n  File \"shenfun/optimization/cython/applymask.pyx\", line 108, in shenfun.optimization.cython.applymask.__pyx_fused_cpdef\n  File \"<stringsource>\", line 7, in match_signatures_single.match_signatures_single\nTypeError: No matching signature found\n"
   }
  ],
  "versions": {
