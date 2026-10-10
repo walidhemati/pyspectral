@@ -120,6 +120,10 @@ dissipation history distributed by the 1st International Workshop on High-Order 
 The traffic model behind "GB/s" counts one read and one write per FFT, a lower bound, since
 real multi-dimensional FFTs make several passes. So the effective bandwidth is never inflated.
 
+<!-- counterparts:start -->
+**Head-to-head** (`bench/counterparts.py`, same machine, *provisional shared-GPU quick run*): at $1024^2$ (2D, fp32) `cupy-cuda-c/fused-inplace` takes 1.53 ms per step, 2.9x faster than JAX-CFD's spectral solver with its own CN-RK4 stepper and 2.2x faster than JAX-CFD's right-hand side inside the same IF-RK4; at $64^3$ (fp64) spectralDNS on 8 MPI ranks needs 74.1 ms per RK4 step on the CPU and the NumPy oracle 96.0 ms; `cupy-cuda-c` is 18x faster than spectralDNS; Dedalus (gpu branch) needs 5.8x the step time of `cupy-cuda-c` at $48^3$. Each code was checked against the pyspectral NumPy oracle on the same initial condition (see the paper).
+<!-- counterparts:end -->
+
 ## How it works
 
 Each RK4 stage runs four operations: a batched in-place C2R FFT, one fused physical-space kernel
@@ -145,6 +149,7 @@ See the paper for the measured effect of each rung.
 
 ```bash
 python bench/run.py --full           # idle GPU, ~25 min -> results/rtx3070-laptop.json
+python bench/counterparts.py --full  # idle GPU+CPU: JAX-CFD, spectralDNS, Dedalus head-to-heads
 scripts/validate.sh                  # validation runs -> results/validation_*.json
 python figures/make_figures.py       # figures/*.pdf|png, paper/results.tex, README tables
 python figures/make_hero.py          # docs/media/hero.gif

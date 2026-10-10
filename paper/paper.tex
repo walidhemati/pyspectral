@@ -66,6 +66,58 @@
 \providecommand{\twoN}{n/a}
 \providecommand{\twoSlope}{n/a}
 \providecommand{\perfTableRows}{}
+\providecommand{\cpMode}{n/a}
+\providecommand{\cpJaxVersion}{n/a}
+\providecommand{\cpJaxCfdVersion}{n/a}
+\providecommand{\cpJaxCommit}{n/a}
+\providecommand{\cpSdnsVersion}{n/a}
+\providecommand{\cpSdnsCommit}{n/a}
+\providecommand{\cpShenfunVersion}{n/a}
+\providecommand{\cpMpiFFTVersion}{n/a}
+\providecommand{\cpMpiLib}{n/a}
+\providecommand{\cpDedVersion}{n/a}
+\providecommand{\cpDedCommit}{n/a}
+\providecommand{\cpDedCupy}{n/a}
+\providecommand{\cpCPU}{n/a}
+\providecommand{\cpTwoN}{n/a}
+\providecommand{\cpJaxCNMs}{n/a}
+\providecommand{\cpJaxIFMs}{n/a}
+\providecommand{\cpPyTwoMs}{n/a}
+\providecommand{\cpPyTwoName}{n/a}
+\providecommand{\cpSpeedJaxCN}{n/a}
+\providecommand{\cpSpeedJaxIF}{n/a}
+\providecommand{\cpJaxFFTGpts}{n/a}
+\providecommand{\cpPyFFTGpts}{n/a}
+\providecommand{\cpFFTRatio}{n/a}
+\providecommand{\cpEagerMs}{n/a}
+\providecommand{\cpEagerOverJaxIF}{n/a}
+\providecommand{\cpTwoNSmall}{n/a}
+\providecommand{\cpSpeedJaxCNSmall}{n/a}
+\providecommand{\cpJaxTGErr}{n/a}
+\providecommand{\cpVerTwoN}{n/a}
+\providecommand{\cpVerTwoSteps}{n/a}
+\providecommand{\cpJaxTurbErrIF}{n/a}
+\providecommand{\cpJaxTurbErrCN}{n/a}
+\providecommand{\cpThreeCpuN}{n/a}
+\providecommand{\cpSdnsMs}{n/a}
+\providecommand{\cpSdnsRanks}{n/a}
+\providecommand{\cpNumpyThreeMs}{n/a}
+\providecommand{\cpCpuRatio}{n/a}
+\providecommand{\cpGpuOverSdns}{n/a}
+\providecommand{\cpSdnsErr}{n/a}
+\providecommand{\cpSdnsVerN}{n/a}
+\providecommand{\cpSdnsVerSteps}{n/a}
+\providecommand{\cpDedN}{n/a}
+\providecommand{\cpDedModes}{n/a}
+\providecommand{\cpDedMs}{n/a}
+\providecommand{\cpDedMem}{n/a}
+\providecommand{\cpPyDedMs}{n/a}
+\providecommand{\cpSpeedDed}{n/a}
+\providecommand{\cpSpeedDedBasd}{n/a}
+\providecommand{\cpDedErr}{n/a}
+\providecommand{\cpDedVerN}{n/a}
+\providecommand{\cpDedVerSteps}{n/a}
+\providecommand{\cpTableRows}{}
 \providecommand{\tgvTableRows}{}
 
 \title{Spectral DNS of turbulence near the FFT roofline from Python}
@@ -140,6 +192,7 @@ calls the algorithm cannot avoid. Our contributions are:
 \item Validation against exact solutions and against the $512^3$ reference DNS of the
   Taylor--Green vortex at $Re=1600$~\cite{wang2013high,vanrees2011comparison}, plus forced 2D
   and 3D spectra.
+\item Same-machine head-to-heads with JAX-CFD, spectralDNS and Dedalus (\cref{sec:h2h}).
 \end{itemize}
 
 \section{Background and related work}
@@ -434,6 +487,69 @@ $\fpRatioTwoN^2$ an fp64 step of the CUDA C backend takes \fpRatioTwo$\times$ as
 step, much more than the $2\times$ that the doubled byte count alone would cause. Production DNS on such hardware is therefore done in fp32. The
 Taylor--Green results above use fp32.
 
+\subsection{Head-to-head with established codes}\label{sec:h2h}
+
+\paragraph{Choice of counterparts.} We compare with three established open-source codes, each in
+its own environment and driven by \texttt{bench/counterparts.py}. (a) The spectral module of JAX-CFD~\cite{dresdner2022learning,
+kochkov2021machine} (\texttt{jax\_cfd.spectral}, JAX~\cite{jax2018github} \cpJaxVersion{},
+commit \texttt{\cpJaxCommit}) solves the 2D vorticity equation pseudo-spectrally on the GPU. We run its stock time stepper, a Crank--Nicolson/low-storage RK4 with five
+stages~\cite{carpenter1994fourth} (\texttt{cn-rk4}, 25 FFTs per step), and its right-hand side
+inside our Lawson IF-RK4 (\texttt{if-rk4}, 20 FFTs: the same algorithm as our advective form).
+(b) spectralDNS~\cite{mortensen2016high} \cpSdnsVersion{} (shenfun \cpShenfunVersion,
+mpi4py-fft \cpMpiFFTVersion~\cite{mortensen2018shenfun,mortensen2019mpi4py}, \cpMpiLib) is the
+Python DNS code whose CPU speed Mortensen and Langtangen compared with C++. It runs on the
+\cpCPU{} of the same laptop in the rotational form with classical RK4 and the 2/3 rule
+(36 FFTs per step, as our rotational form), slab-decomposed over MPI ranks, with its
+\texttt{numba} kernels (the Cython ones do not build against NumPy~2). (c) Dedalus~\cite{
+burns2020dedalus} (\texttt{gpu} branch, \cpDedVersion, commit \texttt{\cpDedCommit}, CuPy
+\cpDedCupy) is, to our knowledge, the only established Python spectral framework with GPU support
+for 3D periodic problems. We keep $M=2N/3$ Fourier modes per axis with $3/2$ padding, which
+retains exactly the modes and product grid of the 2/3 rule on $N^3$, solve
+$\partial_t\mathbf u+\nabla P-\nu\nabla^2\mathbf u=-\mathbf u\cdot\nabla\mathbf u$,
+$\nabla\cdot\mathbf u=0$ (its cross product is not yet ported to the GPU) with the 4-stage
+IMEX scheme RK443 (Dedalus has no classical RK4) at constant $\Delta t$.
+
+
+\paragraph{Agreement.} On the exact 2D Taylor--Green decay both JAX-CFD steppers stay within
+\cpJaxTGErr{} (relative $L_2$, fp64). For decaying 2D turbulence at $N=\cpVerTwoN$ the state
+after \cpVerTwoSteps{} steps differs from our NumPy oracle by \cpJaxTurbErrIF{} with IF-RK4 and
+\cpJaxTurbErrCN{} with JAX-CFD's own stepper; JAX-CFD's brick-wall filter is shifted by one row
+of modes at the $k_x$ edge, so an under-resolved flow would show a larger gap. For the 3D
+Taylor--Green vortex at $Re=1600$, the energy and enstrophy of spectralDNS after
+\cpSdnsVerSteps{} steps on $\cpSdnsVerN^3$ match our explicit-RK4 rotational run to
+\cpSdnsErr{}. Dedalus matches our IF-RK4 run on $\cpDedVerN^3$ to \cpDedErr{} after
+\cpDedVerSteps{} steps, consistent with its third-order time error.
+
+\begin{figure}[!htb]
+\centering
+\includegraphics[width=0.82\linewidth]{../figures/fig_counterparts.pdf}
+\caption{Head-to-heads on one machine. Left: 2D, JAX-CFD (black, grey) and pyspectral variants
+(FFTs per step in brackets). Right: 3D Taylor--Green, fp64: spectralDNS (CPU, best rank count),
+NumPy oracle (CPU), Dedalus (GPU), CUDA C backend (rotational). Dashed: FFT roofline (Basdevant).}
+\label{fig:h2h}
+\end{figure}
+
+
+\paragraph{Speed.} \Cref{fig:h2h} shows the results; every run is listed with its notes in
+\texttt{results/counterparts.json}.\ifcpprovisional{} These numbers are provisional (a
+\texttt{-{}-\cpMode} run on a shared GPU); the publishable ones come from
+\texttt{bench/counterparts.py -{}-full}.\fi{} At $\cpTwoN^2$ (fp32) \texttt{\cpPyTwoName} needs
+\cpPyTwoMs\,ms per step, \cpSpeedJaxCN$\times$ less than JAX-CFD with its own stepper
+(\cpJaxCNMs\,ms) and \cpSpeedJaxIF$\times$ less than JAX-CFD's right-hand side in the same IF-RK4
+(\cpJaxIFMs\,ms). Per transform, our step processes \cpFFTRatio$\times$ as many FFT points per second
+(\cpPyFFTGpts{} vs.\ \cpJaxFFTGpts\,Gpts/s), so the gap is not only the FFT count. XLA itself
+fuses well: JAX-CFD's IF-RK4 is \cpEagerOverJaxIF$\times$ faster than eager PyTorch running the
+identical algorithm (\cpEagerMs\,ms). In 3D at $\cpThreeCpuN^3$ (fp64) spectralDNS on
+\cpSdnsRanks{} MPI ranks takes \cpSdnsMs\,ms per step and our NumPy oracle with
+\texttt{scipy.fft} on 16 threads \cpNumpyThreeMs\,ms; the CUDA C backend in the same rotational
+form is \cpGpuOverSdns$\times$ faster than spectralDNS. At $\cpDedN^3$ ($\cpDedModes^3$ modes,
+fp64) Dedalus needs \cpDedMs\,ms per step and \cpDedMem\,MB of device memory; the CUDA C backend
+needs \cpPyDedMs\,ms (\cpSpeedDed$\times$ less; \cpSpeedDedBasd$\times$ in Basdevant form).
+Dedalus solves general equations through sparse linear solves and transforms the full gradient
+tensor; the ratio is the price of generality. All ratios are per step
+at equal $\Delta t$; the schemes differ in stages, order and stability limit, and spectralDNS's
+CPU timings depend on rank placement and on the \texttt{numba} rather than Cython kernels.
+
 
 
 \section{Discussion}
@@ -454,7 +570,8 @@ copy measurement in the same run is stored in the results file. (iii) The CUDA C
 compiled at run time by NVRTC rather than offline by nvcc. Default optimisation flags and
 link-time options can differ. (iv) Our FFT ceiling is cuFFT as shipped with the installed CUDA libraries. A faster FFT
 would move the roofline. (v) Development timings were taken on a shared GPU; every number in this paper comes from
-the \texttt{--full} run on an idle GPU. (vi) At $384^3$ only the lean in-place CUDA C variant
+the \texttt{--full} run on an idle GPU\ifcpprovisional{}, except the provisional head-to-heads of
+\cref{sec:h2h}\fi. (vi) At $384^3$ only the lean in-place CUDA C variant
 fits into the 8\,GB of the GPU; the other variants run out of memory and are listed as skipped
 in the results file.
 

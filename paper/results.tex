@@ -103,3 +103,81 @@ $256^3$ & 0.01291 & 8.90 & +0.43 & 5.94 & 4075 \\}
 \newcommand{\threeRe}{80}
 \newcommand{\threeKeta}{1.48}
 \newcommand{\threeFit}{3\le k\le 8}
+\newif\ifcpprovisional
+\cpprovisionaltrue
+\newcommand{\cpMode}{quick}
+\newcommand{\cpProvisionalFlag}{1}
+\newcommand{\cpJaxVersion}{0.11.2}
+\newcommand{\cpJaxCfdVersion}{0.2.1}
+\newcommand{\cpJaxCommit}{469d789}
+\newcommand{\cpSdnsVersion}{1.4.0}
+\newcommand{\cpSdnsCommit}{835b01b}
+\newcommand{\cpShenfunVersion}{4.3.0}
+\newcommand{\cpMpiFFTVersion}{2.0.6}
+\newcommand{\cpMpiLib}{MPICH 5.0.2}
+\newcommand{\cpDedVersion}{3.0.5}
+\newcommand{\cpDedCommit}{2389e5d}
+\newcommand{\cpDedCupy}{14.2.0}
+\newcommand{\cpCPU}{AMD Ryzen 7 5800H}
+\newcommand{\cpTwoN}{1024}
+\newcommand{\cpJaxCNMs}{4.48}
+\newcommand{\cpJaxIFMs}{3.35}
+\newcommand{\cpPyTwoMs}{1.53}
+\newcommand{\cpPyTwoName}{cupy-cuda-c/fused-inplace}
+\newcommand{\cpSpeedJaxCN}{2.9}
+\newcommand{\cpSpeedJaxIF}{2.2}
+\newcommand{\cpJaxFFTGpts}{6.3}
+\newcommand{\cpPyFFTGpts}{11.0}
+\newcommand{\cpFFTRatio}{1.8}
+\newcommand{\cpEagerMs}{4.71}
+\newcommand{\cpEagerOverJaxIF}{1.41}
+\newcommand{\cpTwoNSmall}{256}
+\newcommand{\cpJaxCNMsSmall}{0.39}
+\newcommand{\cpJaxIFMsSmall}{0.30}
+\newcommand{\cpPyTwoMsSmall}{0.13}
+\newcommand{\cpPyTwoNameSmall}{cupy-cuda-c/fused-inplace}
+\newcommand{\cpSpeedJaxCNSmall}{2.9}
+\newcommand{\cpSpeedJaxIFSmall}{2.3}
+\newcommand{\cpJaxFFTGptsSmall}{4.4}
+\newcommand{\cpPyFFTGptsSmall}{8.0}
+\newcommand{\cpFFTRatioSmall}{1.8}
+\newcommand{\cpEagerMsSmall}{1.00}
+\newcommand{\cpEagerOverJaxIFSmall}{3.34}
+\newcommand{\cpJaxTGErr}{\num{4.6e-12}}
+\newcommand{\cpVerTwoN}{256}
+\newcommand{\cpVerTwoSteps}{100}
+\newcommand{\cpJaxTurbErrIF}{\num{2.0e-10}}
+\newcommand{\cpJaxTurbDiagIF}{\num{1.4e-16}}
+\newcommand{\cpJaxTurbErrCN}{\num{5.0e-10}}
+\newcommand{\cpJaxTurbDiagCN}{\num{2.0e-12}}
+\newcommand{\cpThreeCpuN}{64}
+\newcommand{\cpSdnsMs}{74.1}
+\newcommand{\cpSdnsRanks}{8}
+\newcommand{\cpNumpyThreeMs}{96.0}
+\newcommand{\cpCpuRatio}{0.77}
+\newcommand{\cpGpuOverSdns}{18}
+\newcommand{\cpSdnsErr}{\num{3.3e-16}}
+\newcommand{\cpSdnsVerN}{64}
+\newcommand{\cpSdnsVerSteps}{10}
+\newcommand{\cpDedN}{48}
+\newcommand{\cpDedModes}{32}
+\newcommand{\cpDedMs}{15.10}
+\newcommand{\cpDedMem}{258}
+\newcommand{\cpPyDedMs}{2.60}
+\newcommand{\cpSpeedDed}{5.8}
+\newcommand{\cpSpeedDedBasd}{8.6}
+\newcommand{\cpDedErr}{\num{3.8e-10}}
+\newcommand{\cpDedVerN}{48}
+\newcommand{\cpDedVerSteps}{10}
+\newcommand{\cpTableRows}{2D $1024^2$ & \texttt{torch-eager/r2c-textbook} & GPU & fp32 & 4 & 20 & 4.71 & 222.5 \\
+2D $1024^2$ & \texttt{jax-cfd/cn-rk4} & GPU & fp32 & 5 & 25 & 4.48 & 233.9 \\
+2D $1024^2$ & \texttt{jax-cfd/if-rk4} & GPU & fp32 & 4 & 20 & 3.35 & 313.2 \\
+2D $1024^2$ & \texttt{cupy-cuda-c/fused-inplace} & GPU & fp32 & 4 & 16 & 1.53 & 686.8 \\
+\midrule
+3D $64^3$ & \texttt{numpy/scipy-fft} & CPU & fp64 & 4 & 36 & 95.98 & 2.7 \\
+3D $64^3$ & \texttt{spectralDNS/rk4-vortex/mpi8} & CPU & fp64 & 4 & 36 & 74.06 & 3.5 \\
+3D $64^3$ & \texttt{cupy-cuda-c/fused-inplace} & GPU & fp64 & 4 & 36 & 4.20 & 62.4 \\
+\midrule
+3D $48^3$ & \texttt{dedalus/rk443-cupy} & GPU & fp64 & 4 & -- & 15.10 & 7.3 \\
+3D $48^3$ & \texttt{cupy-cuda-c/fused-inplace} & GPU & fp64 & 4 & 36 & 2.60 & 42.5 \\
+3D $48^3$ & \texttt{cupy-cuda-c/fused-inplace} & GPU & fp64 & 4 & 32 & 1.76 & 62.7 \\}

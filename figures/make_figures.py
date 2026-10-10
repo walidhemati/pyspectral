@@ -9,6 +9,7 @@ import json
 import math
 import sys
 from pathlib import Path
+from typing import Any
 
 import matplotlib
 
@@ -191,6 +192,242 @@ def fig_precision(doc: dict) -> None:
     save(fig, "fig_precision")
 
 
+# ------------------------------------------------------------------------------ counterparts
+CP_STYLE = {"jax-cfd/cn-rk4": ("k", "-", "s"), "jax-cfd/if-rk4": ("0.55", "-", "D"),
+            "spectralDNS": ("k", None, None), "dedalus": ("0.55", None, None)}
+
+
+def cp_name(r: dict) -> str:
+    return f"{r['code']}/{r['variant']}" if r["code"] != "pyspectral" else r["variant"]
+
+
+def cp_runs(cp: dict, code: str, dim: int, dtype: str, variant: str | None = None,
+            form: str | None = None) -> list[dict]:
+    return [r for r in cp["runs"] if r["code"] == code and r["dim"] == dim
+            and r["dtype"] == dtype and (variant is None or r["variant"] == variant)
+            and (form is None or r["form"] == form)]
+
+
+def _best_by_n(rs: list[dict]) -> dict[int, dict]:
+    out: dict[int, dict] = {}
+    for r in rs:
+        if r["n"] not in out or r["step_ms"] < out[r["n"]]["step_ms"]:
+            out[r["n"]] = r
+    return out
+
+
+def fig_counterparts(cp: dict, doc: dict | None) -> None:
+    """(a) 2D GPU: JAX-CFD vs pyspectral; (b) 3D: spectralDNS (CPU), Dedalus (GPU), pyspectral."""
+    fig, (a, b) = plt.subplots(1, 2, figsize=(FULL_W, 2.4))
+    for v in ("cn-rk4", "if-rk4"):
+        pts = sorted((r["n"], r["Mpts_per_s"]) for r in cp_runs(cp, "jax-cfd", 2, "float32", v))
+        if pts:
+            c, ls, mk = CP_STYLE[f"jax-cfd/{v}"]
+            x, y = zip(*pts, strict=True)
+            nfft = cp_runs(cp, "jax-cfd", 2, "float32", v)[0]["ffts_per_step"]
+            a.loglog(x, y, color=c, ls=ls, marker=mk, ms=3.5, lw=1.2,
+                     label=f"JAX-CFD {v} ({nfft} FFTs)")
+    for v in ("torch-eager/r2c-textbook", "torch-compile/inductor", "triton/fused",
+              "cupy-cuda-c/fused-inplace"):
+        rs = cp_runs(cp, "pyspectral", 2, "float32", v)
+        pts = sorted((r["n"], r["Mpts_per_s"]) for r in rs)
+        if pts:
+            x, y = zip(*pts, strict=True)
+            a.loglog(x, y, color=COLORS[v.split("/")[0]], marker=MARK.get(v, "o"), ms=4, lw=1,
+                     label=f"{v} ({rs[0]['ffts_per_step']})")
+    if doc:
+        ns = sorted({r["n"] for r in cp["runs"] if r["dim"] == 2})
+        ce = sorted({(r["size"][0], r["size"][0] ** 2 / r["roofline_step_ms"] / 1e3)
+                     for r in runs(doc, 2, "float32", "basdevant")
+                     if r.get("roofline_step_ms") and r["size"][0] in ns})
+        if ce:
+            x, y = zip(*ce, strict=True)
+            a.loglog(x, y, "k--", lw=1.0, label="FFT roofline (16 FFTs)")
+    a.set_xlabel("$N$ (grid $N^2$)")
+    a.set_ylabel("Mpts/s (RK4 steps)")
+    a.set_title("2D vorticity, GPU, fp32")
+    ns2 = sorted({r["n"] for r in cp["runs"] if r["dim"] == 2})
+    a.set_xticks(ns2, [str(n) for n in ns2])
+    a.minorticks_off()
+    lo, hi = a.get_ylim()
+    a.set_ylim(lo, hi * 6)
+    a.legend(fontsize=5.5, frameon=False, loc="upper left", ncol=1)
+    # (b) 3D, fp64: grouped bars per N
+    groups = [("spectralDNS (CPU, MPI)", _best_by_n(cp_runs(cp, "spectralDNS", 3, "float64")),
+               dict(color="k")),
+              ("numpy/scipy-fft (CPU)", _best_by_n(cp_runs(cp, "pyspectral", 3, "float64",
+                                                            "numpy/scipy-fft")),
+               dict(color=COLORS["numpy"])),
+              ("Dedalus gpu (GPU)", _best_by_n(cp_runs(cp, "dedalus", 3, "float64")),
+               dict(color="0.55", hatch="////", edgecolor="k", lw=0.4)),
+              ("cupy-cuda-c rotational (GPU)",
+               _best_by_n(cp_runs(cp, "pyspectral", 3, "float64", "cupy-cuda-c/fused-inplace",
+                                  "rotational")), dict(color=COLORS["cupy-cuda-c"]))]
+    ns = sorted({n for _, g, _ in groups for n in g})
+    roof = {}
+    if doc:
+        roof = {r["size"][0]: r["size"][0] ** 3 / r["roofline_step_ms"] / 1e3
+                for r in runs(doc, 3, "float64", "basdevant") if r.get("roofline_step_ms")}
+    seen: set[str] = set()
+    w = 0.8 / len(groups)
+    for j, n in enumerate(ns):
+        present = [(lab, g[n], kw) for lab, g, kw in groups if n in g]
+        for i, (lab, r, kw) in enumerate(present):
+            x = j + (i - (len(present) - 1) / 2) * w
+            b.bar(x, r["Mpts_per_s"], width=w, label=None if lab in seen else lab, **kw)
+            seen.add(lab)
+        if n in roof:
+            half = 0.5 * w * len(present) + 0.05
+            b.hlines(roof[n], j - half, j + half, colors="k", linestyles="--", lw=1.0,
+                     label=None if "roof" in seen else "FFT roofline (32 FFTs)")
+            seen.add("roof")
+    b.set_xticks(range(len(ns)), [f"${n}^3$" for n in ns])
+    b.set_yscale("log")
+    lo, hi = b.get_ylim()
+    b.set_ylim(lo, hi * 30)
+    b.set_ylabel("Mpts/s (time steps)")
+    b.set_title("3D Taylor-Green, fp64")
+    b.legend(fontsize=5.5, frameon=False, loc="upper left", ncol=1)
+    fig.tight_layout()
+    save(fig, "fig_counterparts")
+
+
+def cp_macros(cp: dict, m: Any) -> list[str]:
+    """Macros for the head-to-head subsection; returns the rows of the comparison table."""
+    m("cpMode", cp.get("mode", "?"))
+    m("cpProvisionalFlag", "1" if cp.get("provisional", True) else "0")
+    ver = cp.get("versions", {})
+    if "jax-cfd" in ver:
+        m("cpJaxVersion", ver["jax-cfd"]["jax"])
+        m("cpJaxCfdVersion", ver["jax-cfd"]["jax_cfd"])
+        m("cpJaxCommit", (ver["jax-cfd"].get("commit") or "?")[:7])
+    if "spectralDNS" in ver:
+        v = ver["spectralDNS"]
+        m("cpSdnsVersion", v["spectralDNS"])
+        m("cpSdnsCommit", (v.get("commit") or "?")[:7])
+        m("cpShenfunVersion", v["shenfun"])
+        m("cpMpiFFTVersion", v["mpi4py_fft"])
+        m("cpMpiLib", v["mpi_library"].replace("Version:", "").split()[0] + " "
+          + v["mpi_library"].split()[-1])
+    if "dedalus" in ver:
+        m("cpDedVersion", ver["dedalus"]["dedalus"])
+        m("cpDedCommit", (ver["dedalus"].get("commit") or "?")[:7])
+        m("cpDedCupy", ver["dedalus"]["cupy"])
+    cpu = cp["machine"].get("cpu_model", "CPU").replace("with Radeon Graphics", "").strip()
+    m("cpCPU", cpu)
+    rows: list[str] = []
+
+    def row(r: dict) -> None:
+        dev = "GPU" if r["device"] == "gpu" else "CPU"
+        nfft = r["ffts_per_step"] if r["ffts_per_step"] else "--"
+        name = cp_name(r).replace("_", r"\_")
+        rows.append(f"{r['dim']}D ${r['n']}^{r['dim']}$ & \\texttt{{{name}}} & {dev} & "
+                    f"{'fp32' if r['dtype'] == 'float32' else 'fp64'} & {r['stages_per_step']} "
+                    f"& {nfft} & {r['step_ms']:.2f} & {r['Mpts_per_s']:.1f} \\\\")
+
+    # --- 2D
+    jcn = {r["n"]: r for r in cp_runs(cp, "jax-cfd", 2, "float32", "cn-rk4")}
+    jif = {r["n"]: r for r in cp_runs(cp, "jax-cfd", 2, "float32", "if-rk4")}
+    pyb = _best_by_n([r for r in cp_runs(cp, "pyspectral", 2, "float32")
+                      if "textbook" not in r["variant"]])
+    eag = {r["n"]: r for r in cp_runs(cp, "pyspectral", 2, "float32",
+                                      "torch-eager/r2c-textbook")}
+    common = sorted(set(jcn) & set(jif) & set(pyb))
+    if common:
+        for tag, n in (("", common[-1]), ("Small", common[0])):
+            b = pyb[n]
+            m(f"cpTwoN{tag}", str(n))
+            m(f"cpJaxCNMs{tag}", fmt(jcn[n]["step_ms"], 2))
+            m(f"cpJaxIFMs{tag}", fmt(jif[n]["step_ms"], 2))
+            m(f"cpPyTwoMs{tag}", fmt(b["step_ms"], 2))
+            m(f"cpPyTwoName{tag}", b["variant"])
+            m(f"cpSpeedJaxCN{tag}", fmt(jcn[n]["step_ms"] / b["step_ms"], 1))
+            m(f"cpSpeedJaxIF{tag}", fmt(jif[n]["step_ms"] / b["step_ms"], 1))
+            m(f"cpJaxFFTGpts{tag}", fmt(jif[n]["fft_Gpts_per_s"], 1))
+            m(f"cpPyFFTGpts{tag}", fmt(b["fft_Gpts_per_s"], 1))
+            m(f"cpFFTRatio{tag}", fmt(b["fft_Gpts_per_s"] / jif[n]["fft_Gpts_per_s"], 1))
+            if n in eag:
+                m(f"cpEagerMs{tag}", fmt(eag[n]["step_ms"], 2))
+                m(f"cpEagerOverJaxIF{tag}", fmt(eag[n]["step_ms"] / jif[n]["step_ms"], 2))
+        n = common[-1]
+        for r in sorted([jcn[n], jif[n]] + [r for r in cp_runs(cp, "pyspectral", 2, "float32")
+                                            if r["n"] == n], key=lambda r: -r["step_ms"]):
+            row(r)
+        rows.append(r"\midrule")
+    j64 = {r["n"]: r for r in cp_runs(cp, "jax-cfd", 2, "float64", "cn-rk4")}
+    p64 = _best_by_n(cp_runs(cp, "pyspectral", 2, "float64", "cupy-cuda-c/fused-inplace"))
+    c64 = sorted(set(j64) & set(p64))
+    if c64:
+        n = c64[-1]
+        m("cpTwoNSixtyFour", str(n))
+        m("cpSpeedJaxCNSixtyFour", fmt(j64[n]["step_ms"] / p64[n]["step_ms"], 1))
+    ver2 = [v for v in cp["verification"] if v["code"] == "jax-cfd"]
+    if ver2:
+        tg = [v["rel_l2_state"] for v in ver2 if v["case"] == "tg2d"]
+        tb = {v["variant"]: v for v in ver2 if v["case"] == "turb2d"}
+        if tg:
+            m("cpJaxTGErr", sci(max(tg)))
+        if tb:
+            any_v = next(iter(tb.values()))
+            m("cpVerTwoN", str(any_v["n"]))
+            m("cpVerTwoSteps", str(any_v["nsteps"]))
+            for k, tag in (("if-rk4", "IF"), ("cn-rk4", "CN")):
+                if k in tb:
+                    m(f"cpJaxTurbErr{tag}", sci(tb[k]["rel_l2_state"]))
+                    m(f"cpJaxTurbDiag{tag}", sci(max(tb[k]["rel_diff_energy"],
+                                                     tb[k]["rel_diff_enstrophy"])))
+    # --- 3D CPU
+    sd = _best_by_n(cp_runs(cp, "spectralDNS", 3, "float64"))
+    npy = {r["n"]: r for r in cp_runs(cp, "pyspectral", 3, "float64", "numpy/scipy-fft")}
+    gpu_rot = {r["n"]: r for r in cp_runs(cp, "pyspectral", 3, "float64",
+                                          "cupy-cuda-c/fused-inplace", "rotational")}
+    gpu_bas = {r["n"]: r for r in cp_runs(cp, "pyspectral", 3, "float64",
+                                          "cupy-cuda-c/fused-inplace", "basdevant")}
+    common = sorted(set(sd) & set(npy))
+    if common:
+        n = common[-1]
+        m("cpThreeCpuN", str(n))
+        m("cpSdnsMs", fmt(sd[n]["step_ms"], 1))
+        m("cpSdnsRanks", str(sd[n]["mpi_ranks"]))
+        m("cpNumpyThreeMs", fmt(npy[n]["step_ms"], 1))
+        m("cpCpuRatio", fmt(sd[n]["step_ms"] / npy[n]["step_ms"], 2))
+        if n in gpu_rot:
+            m("cpGpuOverSdns", fmt(sd[n]["step_ms"] / gpu_rot[n]["step_ms"], 0))
+        for r in sorted([r for r in cp_runs(cp, "spectralDNS", 3, "float64") if r["n"] == n]
+                        + [npy[n]] + ([gpu_rot[n]] if n in gpu_rot else []),
+                        key=lambda r: -r["step_ms"]):
+            row(r)
+        rows.append(r"\midrule")
+    vs = [v for v in cp["verification"] if v["code"] == "spectralDNS"]
+    if vs:
+        m("cpSdnsErr", sci(max(max(v["rel_diff_energy"], v["rel_diff_enstrophy"]) for v in vs)))
+        m("cpSdnsVerN", str(max(v["n"] for v in vs)))
+        m("cpSdnsVerSteps", str(vs[0]["nsteps"]))
+    # --- 3D GPU: Dedalus
+    dd = {r["n"]: r for r in cp_runs(cp, "dedalus", 3, "float64")}
+    common = sorted(set(dd) & set(gpu_rot))
+    if common:
+        n = common[-1]
+        m("cpDedN", str(n))
+        m("cpDedModes", str(2 * n // 3))
+        m("cpDedMs", fmt(dd[n]["step_ms"], 2))
+        m("cpDedMem", fmt(dd[n]["peak_mem_MB"] or 0, 0))
+        m("cpPyDedMs", fmt(gpu_rot[n]["step_ms"], 2))
+        m("cpSpeedDed", fmt(dd[n]["step_ms"] / gpu_rot[n]["step_ms"], 1))
+        if n in gpu_bas:
+            m("cpSpeedDedBasd", fmt(dd[n]["step_ms"] / gpu_bas[n]["step_ms"], 1))
+        for r in sorted([dd[n], gpu_rot[n]] + ([gpu_bas[n]] if n in gpu_bas else []),
+                        key=lambda r: -r["step_ms"]):
+            row(r)
+        rows.append(r"\midrule")
+    vd = [v for v in cp["verification"] if v["code"] == "dedalus"]
+    if vd:
+        m("cpDedErr", sci(max(max(v["rel_diff_energy"], v["rel_diff_enstrophy"]) for v in vd)))
+        m("cpDedVerN", str(max(v["n"] for v in vd)))
+        m("cpDedVerSteps", str(vd[0]["nsteps"]))
+    return rows[:-1] if rows and rows[-1] == r"\midrule" else rows
+
+
 # ------------------------------------------------------------------------------ validation
 def fig_tgv3d() -> list[dict]:
     files = sorted(RES.glob("validation_tgv3d_n*.json"), key=lambda p: int(p.stem.split("n")[-1]))
@@ -294,7 +531,7 @@ def sci(x: float) -> str:
 
 
 def write_results_tex(doc: dict | None, v2: dict | None, vb: list | None, tgv: list[dict],
-                      f2: dict | None, f3: dict | None) -> None:
+                      f2: dict | None, f3: dict | None, cp: dict | None = None) -> None:
     L = ["% GENERATED by figures/make_figures.py from results/*.json -- do not edit"]
 
     def m(name: str, val: str) -> None:
@@ -435,8 +672,43 @@ def write_results_tex(doc: dict | None, v2: dict | None, vb: list | None, tgv: l
         m("threeRe", fmt(f3["re_lambda"], 0))
         m("threeKeta", fmt(f3["kmax_eta"], 2))
         m("threeFit", f"{f3['fit_range'][0]:.0f}\\le k\\le {f3['fit_range'][1]:.0f}")
+    L.append(r"\newif\ifcpprovisional")
+    L.append(r"\cpprovisionaltrue" if (cp or {}).get("provisional", True) else
+             r"\cpprovisionalfalse")
+    if cp:
+        cp_rows = cp_macros(cp, m)
+        L.append(r"\newcommand{\cpTableRows}{" + "\n".join(cp_rows) + "}")
     (ROOT / "paper" / "results.tex").write_text("\n".join(L) + "\n")
     print("wrote paper/results.tex")
+
+
+def readme_counterparts(cp: dict) -> str:
+    """One or two README lines on the head-to-heads, from results/counterparts.json."""
+    vals: dict[str, str] = {}
+    cp_macros(cp, lambda k, v: vals.__setitem__(k, v))
+    parts = []
+    if "cpTwoN" in vals:
+        parts.append(f"at ${vals['cpTwoN']}^2$ (2D, fp32) `{vals['cpPyTwoName']}` takes "
+                     f"{vals['cpPyTwoMs']} ms per step, {vals['cpSpeedJaxCN']}x faster than "
+                     f"JAX-CFD's spectral solver with its own CN-RK4 stepper and "
+                     f"{vals['cpSpeedJaxIF']}x faster than JAX-CFD's right-hand side inside "
+                     "the same IF-RK4")
+    if "cpThreeCpuN" in vals:
+        parts.append(f"at ${vals['cpThreeCpuN']}^3$ (fp64) spectralDNS on {vals['cpSdnsRanks']}"
+                     f" MPI ranks needs {vals['cpSdnsMs']} ms per RK4 step on the CPU and the "
+                     f"NumPy oracle {vals['cpNumpyThreeMs']} ms"
+                     + (f"; `cupy-cuda-c` is {vals['cpGpuOverSdns']}x faster than spectralDNS"
+                        if "cpGpuOverSdns" in vals else ""))
+    if "cpDedN" in vals:
+        parts.append(f"Dedalus (gpu branch) needs {vals['cpSpeedDed']}x the step time of "
+                     f"`cupy-cuda-c` at ${vals['cpDedN']}^3$")
+    if not parts:
+        return ""
+    head = ("**Head-to-head** (`bench/counterparts.py`, same machine"
+            + (", *provisional shared-GPU quick run*" if cp.get("provisional", True) else "")
+            + "): ")
+    return head + "; ".join(parts) + ". Each code was checked against the pyspectral NumPy " \
+        "oracle on the same initial condition (see the paper)."
 
 
 def _replace_block(text: str, tag: str, body: str) -> str:
@@ -448,7 +720,7 @@ def _replace_block(text: str, tag: str, body: str) -> str:
 
 
 def update_readme(doc: dict | None, v2: dict | None, vb: list | None, tgv: list[dict],
-                  f2: dict | None, f3: dict | None) -> None:
+                  f2: dict | None, f3: dict | None, cp: dict | None = None) -> None:
     """Fill the generated blocks of README.md from the results JSON."""
     p = ROOT / "README.md"
     if not p.exists():
@@ -519,6 +791,8 @@ def update_readme(doc: dict | None, v2: dict | None, vb: list | None, tgv: list[
                   f"slope {f3['slope']:.2f} (K41: $-5/3$) |")
     if vl:
         t = _replace_block(t, "validation", "| check | result |\n|---|---|\n" + "\n".join(vl))
+    if cp:
+        t = _replace_block(t, "counterparts", readme_counterparts(cp))
     p.write_text(t)
     print("updated README.md")
 
@@ -539,8 +813,11 @@ def main() -> int:
         fig_conv2d(v2)
     if f2 or f3:
         fig_spectra(f2, f3)
-    write_results_tex(doc, v2, vb, tgv, f2, f3)
-    update_readme(doc, v2, vb, tgv, f2, f3)
+    cp = load("counterparts.json")
+    if cp:
+        fig_counterparts(cp, doc)
+    write_results_tex(doc, v2, vb, tgv, f2, f3, cp)
+    update_readme(doc, v2, vb, tgv, f2, f3, cp)
     return 0
 
 
