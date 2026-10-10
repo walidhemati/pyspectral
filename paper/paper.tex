@@ -378,8 +378,7 @@ drag and diagnostics machinery. They are not converged turbulence statistics.
 
 All performance numbers come from \texttt{bench/run.py} on an \gpuName{} (GA104, 40 SMs,
 8\,GB GDDR6, datasheet bandwidth \SI{448}{GB/s}, measured copy bandwidth \copyBW\,GB/s).
-We report the median of 5 repeats, each lasting at least \SI{0.5}{s} (fewer in the provisional
-dev run), after a warm-up that covers JIT compilation, plan creation and autotuning.
+We report the median of 5 repeats, each lasting at least \SI{0.5}{s}, after a warm-up that covers JIT compilation, plan creation and autotuning.
 
 \begin{figure}[!htb]
 \centering
@@ -454,8 +453,10 @@ between runs. (ii) The roofline uses the suite-wide copy bandwidth of \SI{361}{G
 copy measurement in the same run is stored in the results file. (iii) The CUDA C backend is
 compiled at run time by NVRTC rather than offline by nvcc. Default optimisation flags and
 link-time options can differ. (iv) Our FFT ceiling is cuFFT as shipped with the installed CUDA libraries. A faster FFT
-would move the roofline. (v) Development timings were taken on a shared GPU and are marked
-provisional. Only the \texttt{--full} run on an idle GPU is meant for publication.
+would move the roofline. (v) Development timings were taken on a shared GPU; every number in this paper comes from
+the \texttt{--full} run on an idle GPU. (vi) At $384^3$ only the lean in-place CUDA C variant
+fits into the 8\,GB of the GPU; the other variants run out of memory and are listed as skipped
+in the results file.
 
 \section{Conclusion}
 
@@ -463,8 +464,9 @@ A Python package can run Fourier pseudo-spectral DNS close to the speed of the F
 avoid. Minimising the FFT count, fusing all pointwise work into two kernels per stage, and using
 in-place batched cuFFT plans bring a step to \bestTwoRoof\,\% (2D) and \bestThreeRoof\,\% (3D)
 of the FFT roofline on a single consumer GPU. Exact solutions and the $Re=1600$ Taylor--Green
-reference validate the physics. High-level routes (Inductor, CuPy, Warp, Triton) reach a large
-part of this, and hand-written CUDA C adds the rest.
+reference validate the physics. High-level routes (Inductor, CuPy, Warp, Triton) reach
+\hlTwoMin--\hlTwoMax\,\% of the roofline at $\hlTwoN^2$ and \hlThreeMin--\hlThreeMax\,\% at
+$\hlThreeN^3$; hand-written CUDA C closes the remaining gap.
 
 \section*{Code availability}
 Code, benchmark data and scripts to rebuild every figure and number in this paper:

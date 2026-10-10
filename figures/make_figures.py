@@ -325,6 +325,18 @@ def write_results_tex(doc: dict | None, v2: dict | None, vb: list | None, tgv: l
             m(f"best{tag}FFTshare", fmt(100 * (best.get("fft_share_of_step") or 0), 0))
             m(f"best{tag}RoofMs", fmt(best.get("roofline_step_ms") or 0, 2))
             m(f"best{tag}FFTMs", fmt(best.get("fft_ceiling_step_ms") or 0, 2))
+            # high-level routes (no hand-written CUDA C) at the largest grid they all ran
+            hl_b = ("torch-compile", "cupy", "warp", "triton")
+            hl_n = [k for k in sorted({r["size"][0] for r in runs(doc, dim)})
+                    if {r["backend"] for r in runs(doc, dim) if r["size"][0] == k
+                        and r["form"] == "basdevant"} >= set(hl_b)]
+            if hl_n:
+                hl = [r.get("pct_fft_roofline") or 0 for r in runs(doc, dim)
+                      if r["size"][0] == hl_n[-1] and r["form"] == "basdevant"
+                      and r["backend"] in hl_b]
+                m(f"hl{tag}N", str(hl_n[-1]))
+                m(f"hl{tag}Min", fmt(min(hl), 0))
+                m(f"hl{tag}Max", fmt(max(hl), 0))
             nl = _ladder_size(doc, dim)
             rl = [r for r in runs(doc, dim) if r["size"][0] == nl and r["backend"] != "numpy"
                   and (r["form"] == "basdevant" or "textbook" in r["variant"])]

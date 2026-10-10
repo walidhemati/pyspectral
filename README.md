@@ -14,12 +14,10 @@
 ## Headline result
 
 <!-- headline:start -->
-> **Provisional numbers** from a development run on a *shared* GPU (`bench/run.py --dev`); the publishable run is `bench/run.py --full` on an idle GPU.
-
 | | grid | fastest variant | time / RK4 step | throughput | % of FFT roofline | effective BW (% of 361 GB/s) |
 |---|---|---|---|---|---|---|
-| 2D | $4096^2$ | `cupy-cuda-c/fused-inplace-lean` | 27.05 ms | 620 Mpts/s | 99 % | 186 GB/s (52 %) |
-| 3D | $192^3$ | `cupy-cuda-c/fused-inplace-lean` | 22.41 ms | 316 Mpts/s | 103 % | 205 GB/s (57 %) |
+| 2D | $8192^2$ | `cupy-cuda-c/fused-inplace` | 122.63 ms | 547 Mpts/s | 99 % | 164 GB/s (45 %) |
+| 3D | $384^3$ | `cupy-cuda-c/fused-inplace-lean` | 182.44 ms | 310 Mpts/s | 103 % | 201 GB/s (56 %) |
 
 GPU: NVIDIA GeForce RTX 3070 Laptop GPU, fp32, 5 repeats (median).
 <!-- headline:end -->
@@ -100,25 +98,23 @@ dissipation history distributed by the 1st International Workshop on High-Order 
 <!-- perf-table:start -->
 | grid | variant | FFTs/step | ms/step | Mpts/s | GB/s | % copy BW | % FFT roofline |
 |---|---|---|---|---|---|---|---|
-| $2048^2$ | `cupy-cuda-c/fused-inplace-graph` | 16 | 6.42 | 653 | 196 | 54 | 95 |
-| $2048^2$ | `cupy-cuda-c/fused-inplace` | 16 | 6.46 | 649 | 195 | 54 | 95 |
-| $2048^2$ | `triton/fused` | 16 | 9.07 | 462 | 139 | 38 | 67 |
-| $2048^2$ | `warp/fused` | 16 | 9.11 | 461 | 138 | 38 | 67 |
-| $2048^2$ | `cupy/elementwise` | 16 | 10.12 | 414 | 124 | 34 | 60 |
-| $2048^2$ | `torch-compile/inductor` | 16 | 10.76 | 390 | 117 | 32 | 57 |
-| $2048^2$ | `torch-eager/r2c-minfft` | 16 | 18.06 | 232 | 70 | 19 | 34 |
-| $2048^2$ | `torch-eager/r2c-textbook` | 20 | 19.82 | 212 | 77 | 21 | 38 |
-| $2048^2$ | `torch-eager/c2c-textbook` | 20 | 34.89 | 120 | 44 | 12 | 22 |
-| $128^3$ | `cupy-cuda-c/fused-inplace-graph` | 32 | 6.60 | 318 | 207 | 57 | 104 |
-| $128^3$ | `cupy-cuda-c/fused-inplace` | 32 | 6.65 | 315 | 205 | 57 | 103 |
-| $128^3$ | `cupy-cuda-c/fused-inplace-lean` | 32 | 6.77 | 310 | 201 | 56 | 102 |
-| $128^3$ | `warp/fused` | 32 | 8.71 | 241 | 156 | 43 | 79 |
-| $128^3$ | `triton/fused` | 32 | 8.74 | 240 | 156 | 43 | 79 |
-| $128^3$ | `cupy/elementwise` | 32 | 9.34 | 224 | 146 | 40 | 74 |
-| $128^3$ | `torch-compile/inductor` | 32 | 10.95 | 192 | 125 | 34 | 63 |
-| $128^3$ | `torch-eager/r2c-textbook` | 36 | 23.96 | 88 | 63 | 17 | 32 |
-| $128^3$ | `torch-eager/r2c-minfft` | 32 | 24.13 | 87 | 56 | 16 | 28 |
-| $128^3$ | `torch-eager/c2c-textbook` | 36 | 43.27 | 48 | 35 | 10 | 18 |
+| $4096^2$ | `cupy-cuda-c/fused-inplace` | 16 | 26.25 | 639 | 192 | 53 | 102 |
+| $4096^2$ | `cupy-cuda-c/fused-inplace-graph` | 16 | 26.68 | 629 | 189 | 52 | 101 |
+| $4096^2$ | `warp/fused` | 16 | 35.06 | 479 | 144 | 40 | 77 |
+| $4096^2$ | `triton/fused` | 16 | 35.07 | 478 | 144 | 40 | 77 |
+| $4096^2$ | `cupy/elementwise` | 16 | 39.34 | 426 | 128 | 35 | 68 |
+| $4096^2$ | `torch-compile/inductor` | 16 | 39.52 | 424 | 127 | 35 | 68 |
+| $4096^2$ | `torch-eager/r2c-minfft` | 16 | 65.01 | 258 | 77 | 21 | 41 |
+| $4096^2$ | `torch-eager/r2c-textbook` | 20 | 71.90 | 233 | 85 | 24 | 45 |
+| $4096^2$ | `torch-eager/c2c-textbook` | 20 | 127.20 | 132 | 48 | 13 | 26 |
+| $256^3$ | `cupy-cuda-c/fused-inplace-graph` | 32 | 51.59 | 325 | 210 | 58 | 105 |
+| $256^3$ | `cupy-cuda-c/fused-inplace` | 32 | 51.67 | 325 | 210 | 58 | 105 |
+| $256^3$ | `warp/fused` | 32 | 67.85 | 247 | 160 | 44 | 80 |
+| $256^3$ | `triton/fused` | 32 | 68.15 | 246 | 159 | 44 | 79 |
+| $256^3$ | `cupy/elementwise` | 32 | 72.09 | 233 | 151 | 42 | 75 |
+| $256^3$ | `torch-compile/inductor` | 32 | 84.71 | 198 | 128 | 35 | 64 |
+| $256^3$ | `torch-eager/r2c-textbook` | 36 | 184.68 | 91 | 65 | 18 | 32 |
+| $256^3$ | `torch-eager/r2c-minfft` | 32 | 184.83 | 91 | 59 | 16 | 29 |
 <!-- perf-table:end -->
 
 The traffic model behind "GB/s" counts one read and one write per FFT, a lower bound, since
@@ -148,7 +144,7 @@ See the paper for the measured effect of each rung.
 ## Reproduce the paper
 
 ```bash
-python bench/run.py --full           # idle GPU, < 15 min -> results/rtx3070-laptop.json
+python bench/run.py --full           # idle GPU, ~25 min -> results/rtx3070-laptop.json
 scripts/validate.sh                  # validation runs -> results/validation_*.json
 python figures/make_figures.py       # figures/*.pdf|png, paper/results.tex, README tables
 python figures/make_hero.py          # docs/media/hero.gif

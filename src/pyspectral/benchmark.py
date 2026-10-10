@@ -220,6 +220,8 @@ def _free_gpu() -> None:
         import torch
 
         torch.cuda.empty_cache()
+        # each job compiles its own graphs; a long sweep must not hit dynamo's recompile limit
+        torch._dynamo.reset()
     except Exception:  # noqa: BLE001
         pass
     try:
@@ -303,9 +305,9 @@ def plan(mode: str) -> dict[str, Any]:
                 # larger grids only for the leanest variant (keeps the shared GPU < ~1 GB)
                 "big2d": [4096], "big3d": [192],
                 "big_variants": ["cupy-cuda-c/fused-inplace-lean"]}
-    # full: idle GPU, < 15 min. Priority order = job order; a time budget skips the tail.
+    # full: idle GPU, ~25 min. Priority order = job order; a time budget skips the tail.
     return {"sizes2d": [256, 1024, 2048, 4096, 8192], "sizes3d": [64, 128, 192, 256, 384],
-            "min_time": 0.5, "repeats": 5, "budget_s": 780,
+            "min_time": 0.5, "repeats": 5, "budget_s": 1800,
             "fp64": ["cupy-cuda-c/fused-inplace"],
             "variants2d": gpu_2d, "variants3d": [x for x in gpu_all if not x.endswith("-lean")],
             "rot": ["cupy-cuda-c/fused-inplace"],
@@ -448,7 +450,7 @@ def main(argv: list[str] | None = None) -> int:
     g = ap.add_mutually_exclusive_group()
     g.add_argument("--quick", action="store_true", help="< 2 min smoke run")
     g.add_argument("--dev", action="store_true", help="shared-GPU dev run (< 1 GB, provisional)")
-    g.add_argument("--full", action="store_true", help="publishable run (< 15 min, idle GPU)")
+    g.add_argument("--full", action="store_true", help="publishable run (~25 min, idle GPU)")
     ap.add_argument("--out", default=None, help="output JSON path")
     a = ap.parse_args(argv)
     mode = "full" if a.full else "dev" if a.dev else "quick"
