@@ -570,7 +570,7 @@ copy measurement in the same run is stored in the results file. (iii) The CUDA C
 compiled at run time by NVRTC rather than offline by nvcc. Default optimisation flags and
 link-time options can differ. (iv) Our FFT ceiling is cuFFT as shipped with the installed CUDA libraries. A faster FFT
 would move the roofline. (v) Development timings were taken on a shared GPU; every number in this paper comes from
-the \texttt{--full} run on an idle GPU\ifcpprovisional{}, except the provisional head-to-heads of
+the \texttt{-{}-full} run on an idle GPU\ifcpprovisional{}, except the provisional head-to-heads of
 \cref{sec:h2h}\fi. (vi) At $384^3$ only the lean in-place CUDA C variant
 fits into the 8\,GB of the GPU; the other variants run out of memory and are listed as skipped
 in the results file.
